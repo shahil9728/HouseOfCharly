@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { SearchOverlay } from "./SearchOverlay";
+import { Logo } from "./Logo";
 import type { Product } from "@/lib/types";
 
 const NAV = [
@@ -32,9 +33,8 @@ export function Header({ products }: { products: Product[] }) {
               <path d="M3 6h18M3 12h18M3 18h18" /></svg>
           </button>
 
-          <Link href="/" className="flex shrink-0 items-baseline gap-2" aria-label="House of Charly home">
-            <span className="font-display text-[13px] italic text-muted">House of</span>
-            <span className="font-display text-[30px] leading-none tracking-[0.02em]">CharLy</span>
+          <Link href="/" className="flex shrink-0 items-center" aria-label="House of Charly — home">
+            <Logo tone="dark" height={38} priority />
           </Link>
 
           <nav className="ml-3 hidden gap-7 lg:flex">
@@ -66,7 +66,8 @@ export function Header({ products }: { products: Product[] }) {
 
       <nav aria-hidden={!menu}
         className={`fixed inset-0 z-[110] overflow-auto bg-ink p-6 text-white transition-transform duration-300 ${menu ? "translate-x-0" : "translate-x-full"}`}>
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between">
+          <Logo tone="light" height={34} />
           <button onClick={() => setMenu(false)} aria-label="Close menu" className="p-2">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
               <path d="M5 5l14 14M19 5L5 19" /></svg>

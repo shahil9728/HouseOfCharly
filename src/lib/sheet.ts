@@ -14,7 +14,13 @@ import type { Catalog, DataIssue, Product } from "./types";
  * request ever happens in a visitor's browser.
  * ------------------------------------------------------------------------- */
 
-const SHEET_ID = process.env.SHEET_ID ?? "";
+/* The published House of Charly inventory sheet. Env var wins; this fallback
+   exists so a forgotten Netlify variable can't silently ship an empty store. */
+const DEFAULT_SHEET_ID = "1HvYsBJ8TpL_JuWAs59lYpTWJHQjE9VM7IjLXq6Nte-M";
+const SHEET_ID = process.env.SHEET_ID || DEFAULT_SHEET_ID;
+if (!process.env.SHEET_ID) {
+  console.warn("[sheet] SHEET_ID is not set — using the built-in default. Set it in your host's environment variables.");
+}
 const GID_INVENTORY = process.env.SHEET_GID_INVENTORY ?? "0";
 const GID_CATALOG = process.env.SHEET_GID_CATALOG ?? "";
 /* Optional: point the catalog at any CSV URL instead of a Sheet tab. */

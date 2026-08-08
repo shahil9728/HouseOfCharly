@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SITE } from "@/lib/site";
+import { Logo } from "./Logo";
 
 export function Footer() {
   return (
@@ -7,10 +8,7 @@ export function Footer() {
       <div className="wrap">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1.3fr]">
           <div>
-            <div className="mb-3.5 flex items-baseline gap-2">
-              <span className="font-display text-[13px] italic">House of</span>
-              <span className="font-display text-[30px] leading-none text-white">CharLy</span>
-            </div>
+            <Logo tone="light" height={44} className="mb-4" />
             <p className="font-display text-[16px] italic text-[#C9BEB1]">{SITE.tagline}</p>
             <p className="mt-3.5 max-w-[34ch]">
               Dry fruits, nuts, seeds and whole spices — handpicked in Jammu, freshly packed, and delivered with care.

@@ -101,7 +101,7 @@ src/
     slides.ts             hero slideshow content
 ```
 
-## Analytics
+## Analytics setup
 
 Every event goes through `track()` in `src/lib/analytics.ts`, which fans out to
 GA4 and Meta Pixel. Set `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_META_PIXEL_ID` and
@@ -136,3 +136,22 @@ Run the app and check the server logs, or read `issues` from `getCatalog()`.
 As of the last check the sheet had 7 errors and 4 warnings — chiefly `Kaju W-240`
 rows with no price, a duplicate `AL-A500G2601` item code, an `Almonds 1kg` name
 collision, and several seed packs where a larger pack is cheaper than a smaller one.
+
+
+---
+
+## Brand assets
+
+| File | Use |
+|---|---|
+| `public/logo-charly.png` | Wordmark, dark ink — header |
+| `public/logo-charly-light.png` | Wordmark, cream — dark footer |
+| `public/logo-charly-full*.png` | Full lockup incl. tagline |
+| `src/app/icon.png` | Browser tab favicon (512, auto-wired by Next) |
+| `src/app/apple-icon.png` | iOS home-screen icon (180) |
+| `public/favicon.ico` | Legacy .ico, 16/32/48/64 |
+| `src/app/opengraph-image.png` | Social share card (1200x630) |
+
+All are trimmed to the artwork bounds with transparent backgrounds, so the
+wordmark never carries a white box. Render them through `<Logo />`, never by
+re-typesetting the brand name in CSS.
