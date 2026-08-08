@@ -1,0 +1,85 @@
+"use client";
+import Link from "next/link";
+import { inr, stockState } from "@/lib/format";
+import type { Product } from "@/lib/types";
+import { useCart } from "@/context/CartContext";
+import { ProductImage } from "./ProductImage";
+
+type Card = Product & { variants?: number; fromPrice?: number };
+
+export function ProductCard({ p }: { p: Card }) {
+  const { add } = useCart();
+  const s = stockState(p);
+  const tone = s.key === "out" ? "text-brick" : s.key === "low" ? "text-amber" : "text-leaf";
+
+  return (
+    <article className="group flex flex-col rounded-[3px] border border-line bg-white transition
+                        hover:border-[#D6C8B4] hover:shadow-[0_8px_28px_-12px_rgba(20,16,14,0.14)]">
+      <Link href={`/p/${p.slug}`} className="relative block aspect-square overflow-hidden bg-cream">
+        <ProductImage src={p.images[0]} alt={`${p.name} — House of Charly`} name={p.name} sub={p.weight} />
+        <div className="absolute left-2.5 top-2.5 z-[2] flex flex-col items-start gap-1.5">
+          {p.discountPct > 0 && <span className="pill bg-ink text-white">{p.discountPct}% Off</span>}
+          {s.key === "low" && <span className="pill bg-amber-soft text-amber">{s.label}</span>}
+          {s.key === "out" && <span className="pill bg-[#F7E9E6] text-brick">Sold Out</span>}
+        </div>
+      </Link>
+
+      <div className="flex flex-1 flex-col p-4">
+        <Link href={`/p/${p.slug}`}>
+          <div className="text-[10px] uppercase tracking-[0.14em] text-faint">{p.category}</div>
+          <h3 className="mt-1 font-display text-[19px] leading-tight">{p.name}</h3>
+        </Link>
+
+        {p.shortDescription ? (
+          <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-snug text-muted">{p.shortDescription}</p>
+        ) : (
+          <div className="mt-1 text-[11.5px] text-faint">{p.sku}{p.weight ? ` · ${p.weight}` : ""}</div>
+        )}
+
+        {p.variants && p.variants > 1 ? (
+          <div className="mt-1.5 text-[11.5px] text-faint">
+            {p.variants} pack sizes from {inr(p.fromPrice ?? p.price)}
+          </div>
+        ) : null}
+
+        <div className="mt-2.5 flex flex-wrap items-baseline gap-2">
+          <span className="text-[17px] font-semibold">{inr(p.price)}</span>
+          {p.mrp ? (
+            <>
+              <span className="text-[12.5px] text-faint line-through">{inr(p.mrp)}</span>
+              <span className="text-[10.5px] font-bold text-brick">SAVE {inr(p.mrp - p.price)}</span>
+            </>
+          ) : null}
+        </div>
+
+        <div className={`mt-1.5 flex items-center gap-1.5 text-[11px] ${tone}`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />{s.label}
+        </div>
+
+        <div className="mt-auto pt-3">
+          {p.stock > 0 ? (
+            <button className="btn-ghost w-full" onClick={() => add(p.sku, 1)}>Add to Cart</button>
+          ) : (
+            <button className="btn-ghost w-full" disabled>Out of Stock</button>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export function ProductGrid({ items }: { items: Card[] }) {
+  if (!items.length) {
+    return (
+      <div className="py-16 text-center text-muted">
+        <h4 className="font-display text-[26px] text-txt">No products match</h4>
+        <p className="mt-1">Try clearing a filter or searching for something else.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
+      {items.map((p) => <ProductCard key={p.sku} p={p} />)}
+    </div>
+  );
+}
