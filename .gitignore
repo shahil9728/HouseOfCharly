@@ -7,3 +7,12 @@ out
 *.tsbuildinfo
 next-env.d.ts
 .netlify
+
+# brand assets are generated from assets/brand/*.b64 by `npm run brand`
+/public/logo-charly*.png
+/public/icon-mark.png
+/public/favicon.ico
+/src/app/icon.png
+/src/app/apple-icon.png
+/src/app/opengraph-image.png
+/src/app/twitter-image.png

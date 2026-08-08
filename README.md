@@ -13,6 +13,11 @@ cp .env.example .env.local     # fill in SHEET_ID etc.
 npm run dev                    # http://localhost:3000
 ```
 
+> `npm run brand` runs automatically before `dev` and `build`. It decodes the
+> logo, favicon and social card from `assets/brand/*.b64` into `public/` and
+> `src/app/`. Those outputs are gitignored — the base64 files are the source of
+> truth. To change the logo, replace the matching `.b64` file.
+
 ## Deploying to Netlify
 
 1. **New site → Import from Git →** pick this repo.

@@ -1,0 +1,12 @@
+{
+  "public/logo-charly.png": "logo-charly.png.b64",
+  "public/logo-charly-light.png": "logo-charly-light.png.b64",
+  "public/logo-charly-full.png": "logo-charly-full.png.b64",
+  "public/logo-charly-full-light.png": "logo-charly-full-light.png.b64",
+  "public/icon-mark.png": "icon-mark.png.b64",
+  "public/favicon.ico": "favicon.ico.b64",
+  "src/app/icon.png": "icon.png.b64",
+  "src/app/apple-icon.png": "apple-icon.png.b64",
+  "src/app/opengraph-image.png": "opengraph-image.png.b64",
+  "src/app/twitter-image.png": "twitter-image.png.b64"
+}
