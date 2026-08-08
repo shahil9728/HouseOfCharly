@@ -19,12 +19,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const p = await getProduct(slug);
   if (!p) return { title: "Product not found" };
   return {
-    title: p.seoTitle || p.name,
+    title: { absolute: p.seoTitle || `${p.name} — Buy Online | House of Charly` },
     description: p.seoDescription || p.shortDescription || `Buy ${p.name} from House of Charly.`,
     alternates: { canonical: `/p/${p.slug}` },
     openGraph: {
       type: "website",
-      title: p.seoTitle || p.name,
+      title: { absolute: p.seoTitle || `${p.name} — Buy Online | House of Charly` },
       description: p.seoDescription || p.shortDescription,
       images: p.images.length ? [{ url: p.images[0] }] : undefined
     }

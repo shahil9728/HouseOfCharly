@@ -17,10 +17,13 @@ import type { Catalog, DataIssue, Product } from "./types";
 const SHEET_ID = process.env.SHEET_ID ?? "";
 const GID_INVENTORY = process.env.SHEET_GID_INVENTORY ?? "0";
 const GID_CATALOG = process.env.SHEET_GID_CATALOG ?? "";
+/* Optional: point the catalog at any CSV URL instead of a Sheet tab. */
+const CATALOG_URL = process.env.SHEET_CATALOG_URL ?? "";
 const REVALIDATE = Number(process.env.REVALIDATE_SECONDS ?? 300);
 
 const csvUrl = (gid: string) =>
-  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+  gid === "__url__" ? CATALOG_URL
+    : `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
 
 /* --- RFC4180 CSV parser: handles quoted fields with commas and newlines --- */
 export function parseCsv(text: string): string[][] {
@@ -116,9 +119,10 @@ export async function getCatalog(): Promise<Catalog> {
     ], degraded: true, fetchedAt: new Date().toISOString() };
   }
 
-  if (GID_CATALOG) {
+  const catalogSource = CATALOG_URL ? "__url__" : GID_CATALOG;
+  if (catalogSource) {
     try {
-      catalogRows = await fetchTab(GID_CATALOG);
+      catalogRows = await fetchTab(catalogSource);
     } catch (err) {
       // Catalog tab is optional — degrade to inventory-only rather than fail.
       console.warn("[sheet] catalog tab unavailable, continuing without it:", err);
