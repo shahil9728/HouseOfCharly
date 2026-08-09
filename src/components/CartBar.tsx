@@ -26,7 +26,7 @@ export function cartBarState(path: string, qty: number) {
 }
 
 export function CartBar() {
-  const { qty, subtotal, total, shipping, setOpen } = useCart();
+  const { qty, subtotal, total, shipping, celebrate, setOpen } = useCart();
   const path = usePathname() ?? "/";
 
   const { show, desktopOnly: onProductPage } = cartBarState(path, qty);
@@ -40,8 +40,9 @@ export function CartBar() {
       <div aria-hidden className={onProductPage ? "hidden h-[68px] lg:block" : "h-[68px]"} />
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-[75] border-t border-white/10 bg-ink text-white
-                    shadow-[0_-8px_28px_rgba(20,16,14,0.22)]
+        className={`fixed inset-x-0 bottom-0 z-[75] border-t bg-ink text-white
+                    shadow-[0_-8px_28px_rgba(20,16,14,0.22)] transition-colors duration-500
+                    ${celebrate ? "border-leaf" : "border-white/10"}
                     ${onProductPage ? "hidden lg:block" : "block"}`}
       >
         <div className="wrap flex items-center gap-3 py-3">
@@ -67,10 +68,13 @@ export function CartBar() {
                   <span className="ml-2 text-[11px] font-normal text-[#8FCB9B]">Free delivery</span>
                 )}
               </span>
-              <span className="block truncate text-[11.5px] text-[#A99C90] group-hover:text-white">
-                {away > 0
-                  ? `Add ${inr(away)} more for free delivery`
-                  : `${qty} item${qty > 1 ? "s" : ""} · tap to review`}
+              <span className={`block truncate text-[11.5px] ${
+                celebrate ? "font-semibold text-[#8FCB9B]" : "text-[#A99C90] group-hover:text-white"}`}>
+                {celebrate
+                  ? "🎉 Free delivery unlocked!"
+                  : away > 0
+                    ? `Add ${inr(away)} more for free delivery`
+                    : `${qty} item${qty > 1 ? "s" : ""} · tap to review`}
               </span>
             </span>
           </button>

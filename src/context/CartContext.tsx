@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { CartLine, Product } from "@/lib/types";
 import { SITE } from "@/lib/site";
 import { track } from "@/lib/analytics";
@@ -16,6 +16,9 @@ interface Ctx {
   total: number;
   open: boolean;
   toast: string | null;
+  /** True for a moment right after the basket crosses the free-delivery
+   *  threshold — drives the celebration. Never true on first load. */
+  celebrate: boolean;
   setOpen: (v: boolean) => void;
   /** Adds to cart. By default shows a toast and does NOT open the drawer —
    *  opening it on every add blocks shoppers building a multi-item basket. */
@@ -34,6 +37,7 @@ export function CartProvider({ products, children }: { products: Product[]; chil
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
 
   // hydrate from localStorage after mount (avoids SSR mismatch)
   useEffect(() => {
@@ -70,6 +74,22 @@ export function CartProvider({ products, children }: { products: Product[]; chil
   const subtotal = lines.reduce((n, l) => n + l.qty * l.product.price, 0);
   const saved = lines.reduce((n, l) => n + (l.product.mrp ? (l.product.mrp - l.product.price) * l.qty : 0), 0);
   const shipping = subtotal === 0 || subtotal >= SITE.freeShippingOver ? 0 : SITE.shippingFlat;
+
+  /* Fire only on the upward crossing of the threshold. The first settled value
+     after hydration is recorded without firing, so someone returning with an
+     already-qualifying basket doesn't get confetti on page load. */
+  const prevSubtotal = useRef<number | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    const prev = prevSubtotal.current;
+    prevSubtotal.current = subtotal;
+    if (prev === null) return;
+    if (prev < SITE.freeShippingOver && subtotal >= SITE.freeShippingOver) {
+      setCelebrate(true);
+      const t = setTimeout(() => setCelebrate(false), 2800);
+      return () => clearTimeout(t);
+    }
+  }, [subtotal, ready]);
 
   const add = useCallback((sku: string, want = 1, opts?: { toast?: boolean; open?: boolean }) => {
     const showToast = opts?.toast !== false;
@@ -118,7 +138,7 @@ export function CartProvider({ products, children }: { products: Product[]; chil
 
   const value: Ctx = {
     lines, qty, subtotal, saved, shipping, total: subtotal + shipping,
-    open, toast, setOpen, add, qtyOf, setQty: setQtyFn, remove, clear: () => setRaw([])
+    open, toast, celebrate, setOpen, add, qtyOf, setQty: setQtyFn, remove, clear: () => setRaw([])
   };
   return <CartCtx.Provider value={value}>{children}</CartCtx.Provider>;
 }

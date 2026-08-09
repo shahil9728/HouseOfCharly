@@ -38,6 +38,16 @@
     from { transform: scaleX(0); }
     to   { transform: scaleX(1); }
   }
+  /* free-delivery celebration */
+  @keyframes confetti {
+    0%   { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+    100% { transform: translate3d(var(--drift, 0), 105vh, 0) rotate(var(--spin, 360deg)); opacity: 0; }
+  }
+  @keyframes popIn {
+    0%   { transform: translate(-50%, 14px) scale(.85); opacity: 0; }
+    60%  { transform: translate(-50%, 0) scale(1.04); opacity: 1; }
+    100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
