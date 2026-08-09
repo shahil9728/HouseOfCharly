@@ -86,26 +86,38 @@ export function ProductDetail({ product: p, sizes }: { product: Product; sizes: 
               Inclusive of all taxes · {p.weight ? `${p.weight} pack` : p.unit}
             </div>
 
+            {sizes.length > 1 && (
+              <div className="mt-6">
+                <div className="mb-2.5 flex items-baseline gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.13em]">Pack size</span>
+                  <span className="text-[11.5px] text-faint">{sizes.length} options</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {sizes.map((v) => {
+                    const active = v.sku === p.sku;
+                    const soldOut = v.stock <= 0;
+                    return (
+                      <Link key={v.sku} href={`/p/${v.slug}`} aria-current={active ? "page" : undefined}
+                        className={`min-w-[92px] rounded-[3px] border px-3.5 py-2 text-center transition
+                          ${active ? "border-ink bg-ink text-white"
+                                   : "border-line bg-white hover:border-ink"}
+                          ${soldOut ? "opacity-45" : ""}`}>
+                        <span className="block text-[13px] font-semibold">{v.weight || v.unit}</span>
+                        <span className={`block text-[12px] ${active ? "text-white/75" : "text-muted"}`}>
+                          {soldOut ? "Sold out" : inr(v.price)}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="mt-5 max-w-[54ch]">
               {(p.longDescription || p.shortDescription || "").split(/\n\n+/).filter(Boolean).map((par, i) => (
                 <p key={i} className="mb-3 text-muted">{par}</p>
               ))}
             </div>
-
-            {sizes.length > 1 && (
-              <div className="mt-5">
-                <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.13em]">Pack size</div>
-                <div className="flex flex-wrap gap-2">
-                  {sizes.map((v) => (
-                    <Link key={v.sku} href={`/p/${v.slug}`}
-                      className={`rounded-full border px-3.5 py-1.5 text-[11.5px] ${
-                        v.sku === p.sku ? "border-ink bg-ink text-white" : "border-line bg-white text-muted hover:border-ink"}`}>
-                      {v.weight || v.unit} · {inr(v.price)}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {p.stock > 0 ? (
               <>

@@ -292,8 +292,17 @@ export async function getByCategory(categorySlug: string): Promise<Product[]> {
   return (await getProducts()).filter((p) => slugify(p.category) === categorySlug);
 }
 
+/** "Kaju W-320 500g" -> "Kaju W-320", for cards that stand in for every size. */
+export function familyName(name: string) {
+  return name
+    .replace(/\d+(\.\d+)?\s*(kg|g)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .replace(/[\s\-–·,]+$/, "")
+    .trim() || name;
+}
+
 /** One representative per product family — stops six Kaju sizes filling a grid. */
-export function byFamily(list: Product[]): (Product & { variants: number; fromPrice: number })[] {
+export function byFamily(list: Product[]): (Product & { variants: number; fromPrice: number; familyName: string })[] {
   const groups = new Map<string, Product[]>();
   list.forEach((p) => groups.set(p.family, [...(groups.get(p.family) ?? []), p]));
   return [...groups.values()].map((g) => {
@@ -303,7 +312,12 @@ export function byFamily(list: Product[]): (Product & { variants: number; fromPr
       b.discountPct - a.discountPct ||
       a.price - b.price
     )[0];
-    return { ...rep, variants: g.length, fromPrice: Math.min(...g.map((x) => x.price)) };
+    return {
+      ...rep,
+      variants: g.length,
+      fromPrice: Math.min(...g.map((x) => x.price)),
+      familyName: familyName(rep.name)
+    };
   });
 }
 

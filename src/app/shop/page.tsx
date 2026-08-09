@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getProducts } from "@/lib/sheet";
+import { getProducts, byFamily, interleave } from "@/lib/sheet";
 import { ShopBrowser } from "@/components/ShopBrowser";
 
 export const revalidate = 300;
@@ -10,12 +10,13 @@ export const metadata: Metadata = {
 };
 
 export default async function ShopPage() {
-  const products = await getProducts();
+  // one card per product family; pack sizes are chosen on the product page
+  const products = interleave(byFamily(await getProducts()));
   return (
     <ShopBrowser
       products={products}
       title="Shop All Products"
-      lede="Every product below is live from our inventory sheet — prices and stock update automatically."
+      lede="Live from our inventory sheet. Open any product to pick your pack size."
       crumbs={[{ label: "Home", href: "/" }, { label: "Shop All" }]}
     />
   );

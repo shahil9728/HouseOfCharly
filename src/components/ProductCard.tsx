@@ -5,13 +5,16 @@ import type { Product } from "@/lib/types";
 import { useCart } from "@/context/CartContext";
 import { ProductImage } from "./ProductImage";
 
-type Card = Product & { variants?: number; fromPrice?: number };
+type Card = Product & { variants?: number; fromPrice?: number; familyName?: string };
 
 export function ProductCard({ p }: { p: Card }) {
   const { add, qtyOf, setQty } = useCart();
   const s = stockState(p);
   const tone = s.key === "out" ? "text-brick" : s.key === "low" ? "text-amber" : "text-leaf";
   const inCart = qtyOf(p.sku);
+  // a card standing in for several pack sizes shouldn't advertise just one
+  const multi = (p.variants ?? 1) > 1;
+  const title = multi ? (p.familyName ?? p.name) : p.name;
 
   return (
     <article className="group flex flex-col rounded-[3px] border border-line bg-white transition
@@ -28,7 +31,7 @@ export function ProductCard({ p }: { p: Card }) {
       <div className="flex flex-1 flex-col p-4">
         <Link href={`/p/${p.slug}`}>
           <div className="text-[10px] uppercase tracking-[0.14em] text-faint">{p.category}</div>
-          <h3 className="mt-1 font-display text-[19px] leading-tight">{p.name}</h3>
+          <h3 className="mt-1 font-display text-[19px] leading-tight">{title}</h3>
         </Link>
 
         {p.shortDescription ? (
@@ -37,9 +40,9 @@ export function ProductCard({ p }: { p: Card }) {
           <div className="mt-1 text-[11.5px] text-faint">{p.sku}{p.weight ? ` · ${p.weight}` : ""}</div>
         )}
 
-        {p.variants && p.variants > 1 ? (
+        {multi ? (
           <div className="mt-1.5 text-[11.5px] text-faint">
-            {p.variants} pack sizes from {inr(p.fromPrice ?? p.price)}
+            {p.variants} pack sizes · from {inr(p.fromPrice ?? p.price)}
           </div>
         ) : null}
 

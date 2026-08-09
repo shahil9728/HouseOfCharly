@@ -6,6 +6,9 @@ import { ProductGrid } from "./ProductCard";
 import { Breadcrumbs, type Crumb } from "./Breadcrumbs";
 import { inr } from "@/lib/format";
 
+/** A family representative: one card standing in for all its pack sizes. */
+type Card = Product & { variants?: number; fromPrice?: number; familyName?: string };
+
 type Sort = "featured" | "price_asc" | "price_desc" | "discount" | "name";
 
 const SORTS: [Sort, string][] = [
@@ -19,7 +22,7 @@ const SORTS: [Sort, string][] = [
 export function ShopBrowser({
   products, title, lede, crumbs, lockedCategory
 }: {
-  products: Product[]; title: string; lede?: string; crumbs: Crumb[]; lockedCategory?: string;
+  products: Card[]; title: string; lede?: string; crumbs: Crumb[]; lockedCategory?: string;
 }) {
   const categories = useMemo(
     () => [...new Set(products.map((p) => p.category))].sort(),
@@ -50,14 +53,16 @@ export function ShopBrowser({
     if (cats.length) out = out.filter((p) => cats.includes(p.category));
     if (avail.includes("in")) out = out.filter((p) => p.stock > 0);
     if (avail.includes("offer")) out = out.filter((p) => p.discountPct > 0);
-    out = out.filter((p) => p.price <= maxPrice);
+    // a family qualifies if ANY of its pack sizes is within budget
+    out = out.filter((p) => Math.min(p.fromPrice ?? p.price, p.price) <= maxPrice);
 
-    const cmp: Record<Sort, (a: Product, b: Product) => number> = {
+    const from = (p: Card) => Math.min(p.fromPrice ?? p.price, p.price);
+    const cmp: Record<Sort, (a: Card, b: Card) => number> = {
       featured: (a, b) =>
         Number(b.images.length > 0) - Number(a.images.length > 0) ||
         b.discountPct - a.discountPct || a.name.localeCompare(b.name),
-      price_asc: (a, b) => a.price - b.price,
-      price_desc: (a, b) => b.price - a.price,
+      price_asc: (a, b) => from(a) - from(b),
+      price_desc: (a, b) => from(b) - from(a),
       discount: (a, b) => b.discountPct - a.discountPct,
       name: (a, b) => a.name.localeCompare(b.name)
     };
@@ -65,6 +70,8 @@ export function ShopBrowser({
   }, [products, cats, avail, maxPrice, sort]);
 
   const count = (c: string) => products.filter((p) => p.category === c).length;
+  // total individual pack sizes behind the visible cards
+  const packCount = products.reduce((n, p) => n + (p.variants ?? 1), 0);
 
   return (
     <>
@@ -106,7 +113,12 @@ export function ShopBrowser({
 
           <div>
             <div className="mb-6 flex flex-wrap items-center gap-3.5 border-b border-line pb-4">
-              <span className="text-[13px] text-muted"><b>{list.length}</b> product{list.length === 1 ? "" : "s"}</span>
+              <span className="text-[13px] text-muted">
+                <b>{list.length}</b> product{list.length === 1 ? "" : "s"}
+                {packCount > list.length && (
+                  <span className="text-faint"> · {packCount} pack sizes</span>
+                )}
+              </span>
               <div className="flex flex-wrap gap-2">
                 {avail.map((a) => (
                   <button key={a} onClick={() => toggle(avail, setAvail, a)}

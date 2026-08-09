@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getCatalog, slugify } from "@/lib/sheet";
+import { getCatalog, slugify, byFamily } from "@/lib/sheet";
 import { ShopBrowser } from "@/components/ShopBrowser";
 
 export const revalidate = 300;
@@ -43,7 +43,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
   const copy = COPY[category] ?? { title: match, lede: "" };
   return (
     <ShopBrowser
-      products={products.filter((p) => p.sellable && p.category === match)}
+      products={byFamily(products.filter((p) => p.sellable && p.category === match))}
       title={copy.title}
       lede={copy.lede}
       crumbs={[{ label: "Home", href: "/" }, { label: copy.title }]}
