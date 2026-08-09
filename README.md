@@ -70,6 +70,28 @@ site picks it up on the next revalidation — no deploy, no code change.
 Point `SHEET_GID_CATALOG` at that tab's `gid` once you create it. Until then the
 site runs on tab 1 alone and simply shows no descriptions or photos.
 
+### Why product photos are missing
+
+If every product shows the branded placeholder tile, there is **no catalog
+source configured**. Photos and descriptions live in tab 2, not in the
+accounting export. Check the build log for:
+
+```
+[sheet] No catalog source configured — products will have NO photos
+```
+
+Fix it either way:
+
+1. **Sheet tab (recommended).** File > Import > Upload the catalog CSV >
+   "Insert new sheet(s)". Open the new tab and copy its `gid` from the URL
+   (`...#gid=123456`). Set `SHEET_GID_CATALOG=123456`.
+2. **Any CSV URL.** Set `SHEET_CATALOG_URL` to a publicly readable CSV. Useful
+   before the tab exists; overrides `SHEET_GID_CATALOG` when both are set.
+
+After changing either variable on Netlify, use **Clear cache and deploy site**.
+Next.js caches fetch responses between builds, so a plain redeploy can serve
+the previous (empty) catalogue.
+
 ### Data rules the code enforces
 
 - A row with **no `Sale price`** is hidden from the storefront rather than sold at ₹0.

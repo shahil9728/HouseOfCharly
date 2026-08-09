@@ -126,6 +126,16 @@ export async function getCatalog(): Promise<Catalog> {
   }
 
   const catalogSource = CATALOG_URL ? "__url__" : GID_CATALOG;
+  if (!catalogSource) {
+    // Silent-but-wrong is the worst failure mode: without this the store looks
+    // "finished" while every product renders a placeholder tile.
+    console.warn(
+      "[sheet] No catalog source configured — products will have NO photos and NO descriptions.\n" +
+      "        Set SHEET_GID_CATALOG (a second tab in the sheet) or SHEET_CATALOG_URL (any CSV URL)."
+    );
+    issues.push({ sku: "-", name: "-", severity: "warning",
+      issue: "No catalog source configured; product photos and descriptions are unavailable." });
+  }
   if (catalogSource) {
     try {
       catalogRows = await fetchTab(catalogSource);
