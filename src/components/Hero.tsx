@@ -46,7 +46,9 @@ export function Hero({ slides }: { slides: Slide[] }) {
 
   return (
     <section aria-roledescription="carousel" aria-label="Featured collections"
-      onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
+      /* No pause-on-hover: the hero fills the viewport, so a resting cursor
+         sits over it and the slideshow appears frozen. Autoplay still pauses
+         for keyboard focus (below) and when the tab is hidden. */
       onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}
       onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
       onTouchEnd={(e) => {

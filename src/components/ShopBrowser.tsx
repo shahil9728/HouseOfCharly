@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
 import { ProductGrid } from "./ProductCard";
 import { Breadcrumbs, type Crumb } from "./Breadcrumbs";
@@ -22,18 +21,26 @@ export function ShopBrowser({
 }: {
   products: Product[]; title: string; lede?: string; crumbs: Crumb[]; lockedCategory?: string;
 }) {
-  const search = useSearchParams();
-  const offersOnly = search.get("filter") === "offers";
-
   const categories = useMemo(
     () => [...new Set(products.map((p) => p.category))].sort(),
     [products]
   );
 
   const [cats, setCats] = useState<string[]>(lockedCategory ? [lockedCategory] : []);
-  const [avail, setAvail] = useState<string[]>(offersOnly ? ["offer"] : []);
-  const [sort, setSort] = useState<Sort>(offersOnly ? "discount" : "featured");
+  const [avail, setAvail] = useState<string[]>([]);
+  const [sort, setSort] = useState<Sort>("featured");
   const [maxPrice, setMaxPrice] = useState<number>(1200);
+
+  /* Deliberately NOT useSearchParams(): on a statically generated page that
+     opts the entire subtree out of server rendering, so the product grid would
+     be missing from the HTML crawlers see. Reading the query after mount keeps
+     /shop and the category pages fully server-rendered. */
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("filter") === "offers") {
+      setAvail(["offer"]);
+      setSort("discount");
+    }
+  }, []);
 
   const toggle = (list: string[], set: (v: string[]) => void, v: string) =>
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -43,7 +50,6 @@ export function ShopBrowser({
     if (cats.length) out = out.filter((p) => cats.includes(p.category));
     if (avail.includes("in")) out = out.filter((p) => p.stock > 0);
     if (avail.includes("offer")) out = out.filter((p) => p.discountPct > 0);
-    if (avail.includes("photo")) out = out.filter((p) => p.images.length > 0);
     out = out.filter((p) => p.price <= maxPrice);
 
     const cmp: Record<Sort, (a: Product, b: Product) => number> = {
@@ -84,8 +90,6 @@ export function ShopBrowser({
                 checked={avail.includes("in")} onChange={() => toggle(avail, setAvail, "in")} />
               <Opt label="On offer" count={products.filter((p) => p.discountPct > 0).length}
                 checked={avail.includes("offer")} onChange={() => toggle(avail, setAvail, "offer")} />
-              <Opt label="Has photography" count={products.filter((p) => p.images.length > 0).length}
-                checked={avail.includes("photo")} onChange={() => toggle(avail, setAvail, "photo")} />
             </Group>
             <Group title="Max price">
               <input type="range" min={10} max={1200} step={10} value={maxPrice}
@@ -107,7 +111,7 @@ export function ShopBrowser({
                 {avail.map((a) => (
                   <button key={a} onClick={() => toggle(avail, setAvail, a)}
                     className="rounded-full border border-ink bg-ink px-3 py-1.5 text-[11.5px] text-white">
-                    {a === "in" ? "In stock" : a === "offer" ? "On offer" : "Has photo"} ×
+                    {a === "in" ? "In stock" : "On offer"} ×
                   </button>
                 ))}
               </div>

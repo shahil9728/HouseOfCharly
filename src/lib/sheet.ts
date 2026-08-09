@@ -191,7 +191,28 @@ export async function getCatalog(): Promise<Catalog> {
 
     const weightMatch = name.match(/(\d+(?:\.\d+)?)\s*(kg|g)\b/i);
     const weight = weightMatch ? `${weightMatch[1]} ${weightMatch[2].toLowerCase()}` : null;
-    const mrp = price !== null && discount > 0 ? Math.round(price + discount) : null;
+
+    /* PRICING
+     * "Sale price" in the sheet is the list price (what gets struck through).
+     * "Sale Discount" is rupees off. What the customer pays is the difference.
+     *
+     *     final = Sale price − Sale Discount
+     *
+     * A discount that meets or exceeds the list price would sell the item at
+     * zero or a negative amount, so it is ignored and reported instead. */
+    let sellPrice = price;
+    let mrp: number | null = null;
+    let discountPct = 0;
+    if (price !== null && discount > 0) {
+      if (discount >= price) {
+        issues.push({ sku, name, severity: "error",
+          issue: `Sale Discount (${discount}) is not less than Sale price (${price}); discount ignored so the item is not sold at or below zero.` });
+      } else {
+        sellPrice = price - discount;
+        mrp = Math.round(price);
+        discountPct = Math.round((discount / price) * 100);
+      }
+    }
 
     products.push({
       sku,
@@ -201,9 +222,9 @@ export async function getCatalog(): Promise<Catalog> {
       family: familyKey(name),
       unit,
       weight,
-      price: price === null ? 0 : Math.round(price),
+      price: sellPrice === null ? 0 : Math.round(sellPrice),
       mrp,
-      discountPct: mrp ? Math.round((discount / (price! + discount)) * 100) : 0,
+      discountPct,
       stock: Math.max(0, Math.round(stock)),
       lowStockAt: Math.max(1, Math.round(lowStockAt)),
       images,

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getCatalog, slugify } from "@/lib/sheet";
 import { ShopBrowser } from "@/components/ShopBrowser";
@@ -43,14 +42,12 @@ export default async function CategoryPage({ params }: { params: Promise<{ categ
 
   const copy = COPY[category] ?? { title: match, lede: "" };
   return (
-    <Suspense fallback={null}>
-      <ShopBrowser
+    <ShopBrowser
       products={products.filter((p) => p.sellable && p.category === match)}
       title={copy.title}
       lede={copy.lede}
       crumbs={[{ label: "Home", href: "/" }, { label: copy.title }]}
       lockedCategory={match}
     />
-    </Suspense>
   );
 }

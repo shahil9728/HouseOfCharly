@@ -95,14 +95,20 @@ the previous (empty) catalogue.
 ### Data rules the code enforces
 
 - A row with **no `Sale price`** is hidden from the storefront rather than sold at ₹0.
-- **`Sale Discount` is treated as rupees off**, so the struck-through MRP is
-  `price + discount`. If it is meant to be a percentage, change `mrp` in
-  `src/lib/sheet.ts` — it is a one-line edit.
+- **Pricing.** `Sale price` is the list price (shown struck through) and
+  `Sale Discount` is rupees off. What the customer pays is
+  **`Sale price − Sale Discount`**. A discount greater than or equal to the
+  list price is ignored and reported, so nothing can sell at or below zero.
 - **Zero stock** disables Add to Cart. Quantities are clamped to available stock.
 - **Duplicate slugs** get the SKU appended so the build cannot break, and the
   clash is reported as a data issue.
 - Sheet unreachable → the homepage shows a friendly "restocking" message instead
   of a stack trace.
+
+> **Do not call `useSearchParams()` in the shop or category subtree.** On a
+> statically generated page it opts the whole subtree out of server rendering,
+> and the product grid silently disappears from the HTML crawlers see. Read
+> `window.location.search` in an effect after mount instead.
 
 ---
 
