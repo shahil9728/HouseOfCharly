@@ -88,7 +88,7 @@ export function CartDrawer() {
               <span>Total</span><span>{inr(total)}</span>
             </div>
             <Link href="/checkout" onClick={() => { setOpen(false); track("begin_checkout", { value: total, currency: "INR" }); }}
-              className="btn-primary mt-3.5 w-full">Checkout →</Link>
+              className="btn-primary mt-3.5 w-full">Buy Now</Link>
             <button className="btn-ghost mt-2 w-full" onClick={() => setOpen(false)}>Continue Shopping</button>
           </div>
         )}

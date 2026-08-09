@@ -100,10 +100,6 @@ export function CheckoutForm() {
                 placeholder="Gift wrap, delivery timing, bulk quantity…" value={c.note} onChange={set("note")} />
             </Field>
 
-            <h2 className="mb-3 mt-8 font-display text-2xl">Message we will send</h2>
-            <pre className="max-h-[270px] overflow-auto whitespace-pre-wrap rounded-lg bg-[#0B141A] p-4 font-mono text-[12px] leading-relaxed text-[#E9EDEF]">
-              {message}
-            </pre>
           </div>
 
           <aside className="lg:sticky lg:top-24">

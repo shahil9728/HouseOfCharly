@@ -6,6 +6,7 @@ import { CartProvider } from "@/context/CartContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
+import { CartBar } from "@/components/CartBar";
 import { Toast } from "@/components/Toast";
 import { Analytics } from "@/components/Analytics";
 import { SITE } from "@/lib/site";
@@ -56,6 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Header products={products} />
           <main id="main">{children}</main>
           <Footer />
+          <CartBar />
           <CartDrawer />
           <Toast />
         </CartProvider>

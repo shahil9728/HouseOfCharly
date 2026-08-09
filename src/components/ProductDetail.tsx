@@ -184,7 +184,7 @@ export function ProductDetail({ product: p, sizes }: { product: Product; sizes: 
 
       {/* mobile sticky buy bar */}
       {p.stock > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-[70] flex items-center gap-3 border-t border-line bg-white px-4 pb-[calc(0.7rem+env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-6px_24px_rgba(20,16,14,.09)] lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-[76] flex items-center gap-3 border-t border-line bg-white px-4 pb-[calc(0.7rem+env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-6px_24px_rgba(20,16,14,.09)] lg:hidden">
           <div className="min-w-0 flex-1">
             <div className="truncate font-display text-[17px]">{p.name}</div>
             <div className="text-[14px] font-semibold">
