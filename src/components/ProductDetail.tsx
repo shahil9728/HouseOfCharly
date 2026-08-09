@@ -11,11 +11,12 @@ import { useCart } from "@/context/CartContext";
 import { ProductImage } from "./ProductImage";
 
 export function ProductDetail({ product: p, sizes }: { product: Product; sizes: Product[] }) {
-  const { add } = useCart();
+  const { add, qtyOf, setOpen } = useCart();
   const [qty, setQty] = useState(1);
   const [img, setImg] = useState(0);
   const [zoom, setZoom] = useState(false);
   const s = stockState(p);
+  const inCart = qtyOf(p.sku);
 
   useEffect(() => {
     setQty(1); setImg(0);
@@ -122,10 +123,23 @@ export function ProductDetail({ product: p, sizes }: { product: Product; sizes: 
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <button className="btn-ghost min-w-[170px] flex-1 py-4" onClick={() => add(p.sku, qty)}>Add to Cart</button>
-                  <Link href="/checkout" onClick={() => add(p.sku, qty, true)}
+                  <button className="btn-ghost min-w-[170px] flex-1 py-4" onClick={() => add(p.sku, qty)}>
+                    {inCart > 0 ? "Add more" : "Add to Cart"}
+                  </button>
+                  <Link href="/checkout" onClick={() => add(p.sku, qty, { toast: false })}
                     className="btn-primary min-w-[170px] flex-1 py-4">Buy Now</Link>
                 </div>
+
+                {inCart > 0 && (
+                  <div className="mt-3 flex items-center gap-2 text-[13px] text-leaf">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    <span><b>{inCart}</b> already in your cart</span>
+                    <button onClick={() => setOpen(true)}
+                      className="text-muted underline underline-offset-2 hover:text-amber">View cart</button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="mt-6 rounded-sm border-l-[3px] border-amber bg-amber-soft px-4 py-3.5 text-[13.5px] text-[#6B4A15]">
@@ -175,9 +189,12 @@ export function ProductDetail({ product: p, sizes }: { product: Product; sizes: 
             <div className="truncate font-display text-[17px]">{p.name}</div>
             <div className="text-[14px] font-semibold">
               {inr(p.price * qty)}{qty > 1 && <span className="ml-1 text-[12px] font-normal text-faint">({qty})</span>}
+              {inCart > 0 && <span className="ml-2 text-[11px] font-normal text-leaf">{inCart} in cart</span>}
             </div>
           </div>
-          <button className="btn-primary" onClick={() => add(p.sku, qty)}>Add to Cart</button>
+          <button className="btn-primary" onClick={() => add(p.sku, qty)}>
+            {inCart > 0 ? "Add more" : "Add to Cart"}
+          </button>
         </div>
       )}
     </>

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { SearchOverlay } from "./SearchOverlay";
 import { Logo } from "./Logo";
@@ -18,6 +18,19 @@ export function Header({ products }: { products: Product[] }) {
   const { qty, setOpen } = useCart();
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
+
+  /* The drawer no longer opens on every add, so the badge is the primary
+     feedback — give it a short pulse whenever the count changes. */
+  const [pulse, setPulse] = useState(false);
+  const prevQty = useRef(qty);
+  useEffect(() => {
+    if (qty !== prevQty.current && qty > 0) {
+      setPulse(true);
+      const t = setTimeout(() => setPulse(false), 420);
+      return () => clearTimeout(t);
+    }
+    prevQty.current = qty;
+  }, [qty]);
 
   return (
     <>
@@ -55,7 +68,7 @@ export function Header({ products }: { products: Product[] }) {
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
                 <path d="M6 7h12l-1.2 12.2a2 2 0 01-2 1.8H9.2a2 2 0 01-2-1.8z" /><path d="M9 7V5.5a3 3 0 016 0V7" /></svg>
               {qty > 0 && (
-                <span className="absolute right-1 top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-amber px-1 text-[10px] font-bold leading-none text-white">
+                <span className={`absolute right-1 top-1 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-amber px-1 text-[10px] font-bold leading-none text-white transition-transform duration-200 ${pulse ? "scale-[1.45]" : "scale-100"}`}>
                   {qty}
                 </span>
               )}

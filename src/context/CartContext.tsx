@@ -17,7 +17,11 @@ interface Ctx {
   open: boolean;
   toast: string | null;
   setOpen: (v: boolean) => void;
-  add: (sku: string, qty?: number, silent?: boolean) => void;
+  /** Adds to cart. By default shows a toast and does NOT open the drawer —
+   *  opening it on every add blocks shoppers building a multi-item basket. */
+  add: (sku: string, qty?: number, opts?: { toast?: boolean; open?: boolean }) => void;
+  /** How many of this SKU are already in the cart (0 if none). */
+  qtyOf: (sku: string) => number;
   setQty: (sku: string, qty: number) => void;
   remove: (sku: string) => void;
   clear: () => void;
@@ -67,7 +71,9 @@ export function CartProvider({ products, children }: { products: Product[]; chil
   const saved = lines.reduce((n, l) => n + (l.product.mrp ? (l.product.mrp - l.product.price) * l.qty : 0), 0);
   const shipping = subtotal === 0 || subtotal >= SITE.freeShippingOver ? 0 : SITE.shippingFlat;
 
-  const add = useCallback((sku: string, want = 1, silent = false) => {
+  const add = useCallback((sku: string, want = 1, opts?: { toast?: boolean; open?: boolean }) => {
+    const showToast = opts?.toast !== false;
+    const openDrawer = opts?.open === true;
     const p = bySku.get(sku);
     if (!p) return;
     if (p.stock <= 0) { setToast("Sorry, that product is out of stock."); return; }
@@ -78,7 +84,7 @@ export function CartProvider({ products, children }: { products: Product[]; chil
       const added = final - have;
       if (added <= 0) { setToast(`Only ${p.stock} in stock — that's the maximum.`); return prev; }
       if (have + want > p.stock) setToast(`Only ${p.stock} in stock — cart set to the maximum.`);
-      else if (!silent) setToast(`${p.name} added to cart`);
+      else if (showToast) setToast(`${p.name} added · ${final} in cart`);
 
       track("add_to_cart", {
         currency: "INR", value: p.price * added,
@@ -88,7 +94,7 @@ export function CartProvider({ products, children }: { products: Product[]; chil
         ? prev.map((l) => (l.sku === sku ? { ...l, qty: final } : l))
         : [...prev, { sku, qty: final }];
     });
-    if (!silent) setOpen(true);
+    if (openDrawer) setOpen(true);
   }, [bySku]);
 
   const setQtyFn = useCallback((sku: string, next: number) => {
@@ -99,6 +105,11 @@ export function CartProvider({ products, children }: { products: Product[]; chil
       : prev.map((l) => (l.sku === sku ? { ...l, qty: clamped } : l)));
   }, [bySku]);
 
+  const qtyOf = useCallback(
+    (sku: string) => raw.find((l) => l.sku === sku)?.qty ?? 0,
+    [raw]
+  );
+
   const remove = useCallback((sku: string) => {
     const p = bySku.get(sku);
     if (p) track("remove_from_cart", { items: [{ item_id: p.sku, item_name: p.name }] });
@@ -107,7 +118,7 @@ export function CartProvider({ products, children }: { products: Product[]; chil
 
   const value: Ctx = {
     lines, qty, subtotal, saved, shipping, total: subtotal + shipping,
-    open, toast, setOpen, add, setQty: setQtyFn, remove, clear: () => setRaw([])
+    open, toast, setOpen, add, qtyOf, setQty: setQtyFn, remove, clear: () => setRaw([])
   };
   return <CartCtx.Provider value={value}>{children}</CartCtx.Provider>;
 }
