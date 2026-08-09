@@ -8,7 +8,7 @@ import { ProductImage } from "./ProductImage";
 type Card = Product & { variants?: number; fromPrice?: number };
 
 export function ProductCard({ p }: { p: Card }) {
-  const { add, qtyOf, setQty, setOpen } = useCart();
+  const { add, qtyOf, setQty } = useCart();
   const s = stockState(p);
   const tone = s.key === "out" ? "text-brick" : s.key === "low" ? "text-amber" : "text-leaf";
   const inCart = qtyOf(p.sku);
@@ -64,34 +64,29 @@ export function ProductCard({ p }: { p: Card }) {
             <button className="btn-ghost w-full" onClick={() => add(p.sku, 1)}>Add to Cart</button>
           ) : (
             /* Already in the basket: swap the button for a stepper so the
-               shopper can see and adjust the count without leaving the grid. */
-            <div>
-              <div className="flex h-[46px] items-center justify-between rounded-[3px] border border-ink bg-ink text-white">
-                <button
-                  onClick={() => setQty(p.sku, inCart - 1)}
-                  aria-label={inCart === 1 ? `Remove ${p.name} from cart` : `Decrease ${p.name} quantity`}
-                  className="grid h-full w-11 place-items-center text-[18px] transition hover:bg-white/10">
-                  {inCart === 1 ? (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
-                      <path d="M4 7h16M9 7V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7M7 7l1 12.5A1.5 1.5 0 009.5 21h5a1.5 1.5 0 001.5-1.5L17 7" />
-                    </svg>
-                  ) : "−"}
-                </button>
-                <span className="text-[12px] font-semibold uppercase tracking-[0.1em] tabular-nums">
-                  {inCart} in cart
-                </span>
-                <button
-                  onClick={() => add(p.sku, 1)}
-                  disabled={inCart >= p.stock}
-                  aria-label={`Increase ${p.name} quantity`}
-                  className="grid h-full w-11 place-items-center text-[18px] transition hover:bg-white/10 disabled:opacity-35">
-                  +
-                </button>
-              </div>
+               shopper can see and adjust the count without leaving the grid.
+               No "view cart" link here — the header cart icon is the single
+               entry point, and a per-card link just adds noise to the grid. */
+            <div className="flex h-[46px] items-center justify-between rounded-[3px] border border-ink bg-ink text-white">
               <button
-                onClick={() => setOpen(true)}
-                className="mt-1.5 w-full text-[11px] uppercase tracking-[0.1em] text-muted underline-offset-2 hover:text-amber hover:underline">
-                View cart
+                onClick={() => setQty(p.sku, inCart - 1)}
+                aria-label={inCart === 1 ? `Remove ${p.name} from cart` : `Decrease ${p.name} quantity`}
+                className="grid h-full w-11 place-items-center text-[18px] transition hover:bg-white/10">
+                {inCart === 1 ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                  <path d="M4 7h16M9 7V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7M7 7l1 12.5A1.5 1.5 0 009.5 21h5a1.5 1.5 0 001.5-1.5L17 7" />
+                </svg>
+                ) : "−"}
+              </button>
+              <span className="text-[12px] font-semibold uppercase tracking-[0.1em] tabular-nums">
+                {inCart} in cart
+              </span>
+              <button
+                onClick={() => add(p.sku, 1)}
+                disabled={inCart >= p.stock}
+                aria-label={`Increase ${p.name} quantity`}
+                className="grid h-full w-11 place-items-center text-[18px] transition hover:bg-white/10 disabled:opacity-35">
+                +
               </button>
             </div>
           )}
