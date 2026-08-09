@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { inr } from "@/lib/format";
@@ -12,10 +11,10 @@ import { track } from "@/lib/analytics";
  * (Blinkit / Zepto / Flipkart): once there is something in the cart a slim bar
  * sits at the bottom with the running total and a direct route to checkout.
  *
- * Tapping the summary opens the drawer to review; the button skips straight to
- * checkout. Hidden when the cart is empty and on checkout itself, and hidden on
- * mobile product pages where the page's own Add-to-Cart bar already occupies
- * that space.
+ * Both the summary and the Buy Now button open the cart drawer, so the basket
+ * is always reviewed before checkout; the drawer's own Buy Now completes the
+ * trip. Hidden when the cart is empty and on checkout itself, and hidden on
+ * mobile product pages where the page's own Add-to-Cart bar owns that space.
  */
 /** Pure so the routing rules can be unit-tested without a DOM. */
 export function cartBarState(path: string, qty: number) {
@@ -79,13 +78,18 @@ export function CartBar() {
             </span>
           </button>
 
-          <Link
-            href="/checkout"
-            onClick={() => track("begin_checkout", { value: total, currency: "INR", source: "cart_bar" })}
+          {/* Opens the cart drawer rather than jumping to /checkout, so the
+              basket can be reviewed and adjusted first. The drawer's own
+              Buy Now completes the trip to checkout. */}
+          <button
+            onClick={() => {
+              track("view_cart", { value: total, currency: "INR", source: "cart_bar" });
+              setOpen(true);
+            }}
             className="btn-amber shrink-0 px-6 py-3.5"
           >
             Buy Now
-          </Link>
+          </button>
         </div>
       </div>
     </>
