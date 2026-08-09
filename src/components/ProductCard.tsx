@@ -78,8 +78,8 @@ export function ProductCard({ p }: { p: Card }) {
                 </svg>
                 ) : "−"}
               </button>
-              <span className="text-[12px] font-semibold uppercase tracking-[0.1em] tabular-nums">
-                {inCart} in cart
+              <span className="text-[15px] font-semibold tabular-nums" aria-live="polite">
+                <span className="sr-only">{p.name} quantity in cart: </span>{inCart}
               </span>
               <button
                 onClick={() => add(p.sku, 1)}
