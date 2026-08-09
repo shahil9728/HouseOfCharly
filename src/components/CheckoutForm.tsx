@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { inr } from "@/lib/format";
 import { track } from "@/lib/analytics";
-import { buildOrderMessage, waLink, type OrderCustomer } from "@/lib/whatsapp";
+import { SITE } from "@/lib/site";
+import type { OrderCustomer } from "@/lib/whatsapp";
 import { ProductImage } from "./ProductImage";
 
 const EMPTY: OrderCustomer = { name: "", phone: "", address: "", city: "", pin: "", note: "" };
@@ -18,20 +20,32 @@ const RULES: [keyof OrderCustomer, (v: string) => boolean, string][] = [
   ["pin", (v) => /^\d{6}$/.test(v.replace(/\D/g, "")), "6 digits."]
 ];
 
-export function CheckoutForm() {
+type Method = "razorpay" | "cod";
+
+/** Razorpay's checkout script, loaded only when someone actually pays online. */
+function loadRazorpay(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if ((window as { Razorpay?: unknown }).Razorpay) return resolve(true);
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
+
+export function CheckoutForm({ onlineEnabled }: { onlineEnabled: boolean }) {
   const { lines, qty, subtotal, saved, shipping, total } = useCart();
+  const router = useRouter();
   const [c, setC] = useState<OrderCustomer>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof OrderCustomer, string>>>({});
+  const [method, setMethod] = useState<Method>(onlineEnabled ? "razorpay" : "cod");
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const set = (k: keyof OrderCustomer) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setC((p) => ({ ...p, [k]: e.target.value }));
-
-  const message = useMemo(
-    () => buildOrderMessage(c,
-      lines.map((l) => ({ name: l.product.name, sku: l.product.sku, qty: l.qty, price: l.product.price })),
-      { subtotal, saved, shipping, total, qty }),
-    [c, lines, subtotal, saved, shipping, total, qty]
-  );
 
   if (!lines.length) {
     return (
@@ -43,7 +57,7 @@ export function CheckoutForm() {
     );
   }
 
-  const submit = () => {
+  const validate = () => {
     const next: Partial<Record<keyof OrderCustomer, string>> = {};
     RULES.forEach(([k, test, msg]) => { if (!test(String(c[k] ?? ""))) next[k] = msg; });
     setErrors(next);
@@ -51,13 +65,92 @@ export function CheckoutForm() {
       const first = document.querySelector<HTMLElement>(`[data-field="${Object.keys(next)[0]}"]`);
       first?.scrollIntoView({ block: "center", behavior: "smooth" });
       first?.focus();
-      return;
+      return false;
     }
-    track("whatsapp_order", {
-      currency: "INR", value: total, num_items: qty,
-      items: lines.map((l) => ({ item_id: l.product.sku, item_name: l.product.name, quantity: l.qty, price: l.product.price }))
+    return true;
+  };
+
+  // the server re-prices from the sheet; we only send what was chosen
+  const payload = () => ({
+    items: lines.map((l) => ({ sku: l.product.sku, qty: l.qty })),
+    customer: { ...c, phone: c.phone.replace(/\D/g, "") }
+  });
+
+  const placeCod = async () => {
+    const res = await fetch("/api/checkout/cod", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload())
     });
-    window.open(waLink(message), "_blank", "noopener");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error ?? "Could not place the order.");
+    track("purchase", { transaction_id: data.ref, value: data.total, currency: "INR", payment_type: "cod" });
+    router.push(`/order/success?ref=${encodeURIComponent(data.ref)}&method=cod`);
+  };
+
+  const payOnline = async () => {
+    const created = await fetch("/api/checkout/create-order", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload())
+    });
+    const order = await created.json();
+    if (!created.ok) throw new Error(order?.error ?? "Could not start payment.");
+
+    if (!(await loadRazorpay())) throw new Error("Could not reach the payment provider. Check your connection.");
+
+    const RazorpayCtor = (window as unknown as { Razorpay: new (o: unknown) => { open: () => void } }).Razorpay;
+    const rzp = new RazorpayCtor({
+      key: order.keyId,
+      order_id: order.orderId,
+      amount: order.amount,
+      currency: order.currency,
+      name: SITE.name,
+      description: `${qty} item${qty > 1 ? "s" : ""} · ${order.ref}`,
+      image: "/icon.png",
+      prefill: { name: c.name, contact: c.phone.replace(/\D/g, "") },
+      notes: { address: `${c.address}, ${c.city} ${c.pin}` },
+      theme: { color: "#B4741F" },
+      modal: {
+        ondismiss: () => {
+          setBusy(false);
+          setFailure("Payment was cancelled. Your cart is safe — you can try again.");
+        }
+      },
+      handler: async (r: Record<string, string>) => {
+        try {
+          const v = await fetch("/api/checkout/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...r, ref: order.ref, ...payload() })
+          });
+          const out = await v.json();
+          if (!v.ok || !out.ok) throw new Error(out?.error ?? "Payment could not be verified.");
+          track("purchase", {
+            transaction_id: order.ref, value: order.total, currency: "INR", payment_type: "razorpay"
+          });
+          router.push(`/order/success?ref=${encodeURIComponent(order.ref)}&method=razorpay`);
+        } catch (err) {
+          setBusy(false);
+          setFailure(
+            err instanceof Error
+              ? `${err.message} If money was deducted, contact us on ${SITE.phone} with your payment ID.`
+              : "Payment verification failed."
+          );
+        }
+      }
+    });
+    rzp.open();
+  };
+
+  const submit = async () => {
+    setFailure(null);
+    if (!validate() || busy) return;
+    setBusy(true);
+    track("begin_checkout", { value: total, currency: "INR", payment_type: method });
+    try {
+      if (method === "cod") { await placeCod(); }
+      else { await payOnline(); return; }   // Razorpay clears `busy` via its own callbacks
+    } catch (err) {
+      setFailure(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setBusy(false);
+    }
   };
 
   return (
@@ -65,8 +158,7 @@ export function CheckoutForm() {
       <div className="wrap">
         <h1 className="text-[clamp(34px,4.4vw,50px)]">Checkout</h1>
         <p className="mt-2 max-w-[56ch] text-muted">
-          Fill in your details and we will open a pre-filled order message for you to send.
-          No account needed, no payment online.
+          Enter your delivery details and choose how you would like to pay. No account needed.
         </p>
 
         <div className="mt-8 grid items-start gap-8 lg:grid-cols-[1.15fr_.85fr] lg:gap-12">
@@ -100,6 +192,21 @@ export function CheckoutForm() {
                 placeholder="Gift wrap, delivery timing, bulk quantity…" value={c.note} onChange={set("note")} />
             </Field>
 
+            <h2 className="mb-4 mt-9 font-display text-2xl">Payment</h2>
+            <div className="space-y-3">
+              {onlineEnabled && (
+                <PayOption
+                  checked={method === "razorpay"} onSelect={() => setMethod("razorpay")}
+                  title="Pay online" tag="Recommended"
+                  desc="UPI, cards, net banking or wallets. Secured by Razorpay."
+                />
+              )}
+              <PayOption
+                checked={method === "cod"} onSelect={() => setMethod("cod")}
+                title="Cash on Delivery"
+                desc="Pay the delivery partner when your order arrives."
+              />
+            </div>
           </div>
 
           <aside className="lg:sticky lg:top-24">
@@ -125,11 +232,26 @@ export function CheckoutForm() {
                   <span>Total payable</span><span>{inr(total)}</span>
                 </div>
               </div>
-              <button onClick={submit} className="btn-wa mt-4 w-full py-4">
-                Place Order · {inr(total)}
+
+              {failure && (
+                <p role="alert" className="mt-4 rounded-sm border-l-[3px] border-brick bg-[#FDF7F6] px-3.5 py-3 text-[13px] text-brick">
+                  {failure}
+                </p>
+              )}
+
+              <button onClick={submit} disabled={busy}
+                className={`${method === "cod" ? "btn-primary" : "btn-amber"} mt-4 w-full py-4`}>
+                {busy
+                  ? "Please wait…"
+                  : method === "cod"
+                    ? `Place Order · ${inr(total)}`
+                    : `Pay ${inr(total)}`}
               </button>
+
               <p className="mt-2.5 text-center text-[11.5px] text-faint">
-                No payment now. We confirm stock, delivery and payment with you personally.
+                {method === "cod"
+                  ? "Pay in cash when your order is delivered."
+                  : "Payments are processed securely by Razorpay. We never see your card details."}
               </p>
             </div>
             <Link href="/shop" className="btn-ghost mt-3 w-full">Continue Shopping</Link>
@@ -137,6 +259,25 @@ export function CheckoutForm() {
         </div>
       </div>
     </section>
+  );
+}
+
+function PayOption({ checked, onSelect, title, desc, tag }: {
+  checked: boolean; onSelect: () => void; title: string; desc: string; tag?: string;
+}) {
+  return (
+    <label className={`flex cursor-pointer gap-3 rounded-[3px] border p-4 transition
+      ${checked ? "border-ink bg-cream-2" : "border-line bg-white hover:border-[#D6C8B4]"}`}>
+      <input type="radio" name="payment" checked={checked} onChange={onSelect}
+        className="mt-1 h-4 w-4 accent-amber" />
+      <span>
+        <span className="flex items-center gap-2">
+          <span className="font-semibold">{title}</span>
+          {tag && <span className="pill bg-leaf-soft text-leaf">{tag}</span>}
+        </span>
+        <span className="mt-0.5 block text-[13px] text-muted">{desc}</span>
+      </span>
+    </label>
   );
 }
 

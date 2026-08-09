@@ -147,12 +147,51 @@ Events emitted: `page_view`, `view_item`, `search`, `add_to_cart`,
 `add_to_cart` reports the quantity **actually** added after stock clamping, not
 the quantity requested — otherwise conversion data drifts.
 
-## Payments later
+## Payments
 
-Checkout collects the customer and builds a WhatsApp message; it does not take
-payment. To add a gateway, replace the submit handler in
-`src/components/CheckoutForm.tsx` — the cart, totals and shipping rules stay as
-they are.
+Two methods: **Razorpay** (UPI, cards, net banking, wallets) and **Cash on
+Delivery**. Online payment only appears when both Razorpay keys are set —
+without them checkout silently falls back to COD, so the site is never broken
+by a missing variable.
+
+| Variable | Where | Notes |
+|---|---|---|
+| `RAZORPAY_KEY_ID` | server | Also sent to the browser to open checkout — public by design. |
+| `RAZORPAY_KEY_SECRET` | server | **Never** prefix with `NEXT_PUBLIC_`. Signs and verifies payments. |
+| `ORDERS_WEBHOOK_URL` | server | Any JSON POST endpoint. See `docs/orders-apps-script.js`. |
+
+### The two rules this code exists to enforce
+
+1. **The browser never sets the price.** `POST /api/checkout/create-order`
+   receives only `{ sku, qty }`. Every price, the shipping rule and the total
+   are recomputed in `priceOrder()` from the sheet. A tampered request asking to
+   pay ₹1 for a ₹740 order is charged ₹740.
+2. **Every payment is verified server-side.** Razorpay signs
+   `order_id|payment_id` with the key secret; `/api/checkout/verify` recomputes
+   that HMAC and compares it in constant time. A forged success POST is
+   rejected with 400 and nothing is recorded.
+
+### Flow
+
+```
+Checkout → /api/checkout/create-order   (server prices the cart, creates a Razorpay order)
+         → Razorpay modal               (card/UPI handled entirely by Razorpay)
+         → /api/checkout/verify         (HMAC check, then record the order)
+         → /order/success               (clears the cart, shows the reference)
+
+COD      → /api/checkout/cod            (server prices, records) → /order/success
+```
+
+The cart is cleared **only** on the success page, so an abandoned or failed
+payment leaves the basket intact.
+
+### Recording orders
+
+Without `ORDERS_WEBHOOK_URL`, orders are written to the server log only. Paid
+orders are still recoverable from the Razorpay dashboard, but **COD orders are
+not recoverable** — set this before taking COD orders. `docs/orders-apps-script.js`
+is a ready-to-deploy Google Apps Script that appends each order to an "Orders"
+tab and emails you.
 
 ## Images
 
