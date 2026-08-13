@@ -9,6 +9,7 @@ import { track } from "@/lib/analytics";
 import { waLink } from "@/lib/whatsapp";
 import { useCart } from "@/context/CartContext";
 import { ProductImage } from "./ProductImage";
+import { imageAlt } from "./ProductCard";
 
 export function ProductDetail({ product: p, sizes }: { product: Product; sizes: Product[] }) {
   const { add, qtyOf, setOpen } = useCart();
@@ -38,7 +39,7 @@ export function ProductDetail({ product: p, sizes }: { product: Product; sizes: 
             <div onClick={() => setZoom((z) => !z)}
               className={`relative aspect-square overflow-hidden border border-line bg-white ${zoom ? "cursor-zoom-out" : "cursor-zoom-in"}`}>
               <div className={`h-full w-full transition-transform duration-300 ${zoom ? "scale-[2]" : "scale-100"}`}>
-                <ProductImage src={images[img]} alt={`${p.name} — House of Charly`} name={p.name}
+                <ProductImage src={images[img]} alt={imageAlt(p)} name={p.name}
                   sub={p.weight} priority sizes="(max-width:1024px) 100vw, 55vw" />
               </div>
             </div>
@@ -47,7 +48,7 @@ export function ProductDetail({ product: p, sizes }: { product: Product; sizes: 
                 {images.map((src, j) => (
                   <button key={src} onClick={() => setImg(j)} aria-label={`View image ${j + 1}`}
                     className={`relative h-[74px] w-[74px] overflow-hidden border bg-white ${j === img ? "border-ink" : "border-line"}`}>
-                    <ProductImage src={src} alt={`${p.name} view ${j + 1}`} name={p.name} sizes="74px" />
+                    <ProductImage src={src} alt={`${p.name} — photo ${j + 1} of ${images.length}`} name={p.name} sizes="74px" />
                   </button>
                 ))}
               </div>

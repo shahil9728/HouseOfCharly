@@ -14,12 +14,17 @@ export function Footer() {
               Dry fruits, nuts, seeds and whole spices — handpicked in Jammu, freshly packed, and delivered with care.
             </p>
           </div>
+          {/* The footer is the site's crawl backbone: it is the only place every
+              page links to every other section, which is how a product page
+              three clicks deep still gets found. /about was previously reachable
+              only from the home page — an orphan for anyone arriving from search. */}
           <FooterCol title="Shop" links={[
-            ["All Products", "/shop"], ["Dry Fruits", "/c/dry-fruit"],
-            ["Spices", "/c/spices"], ["Offers", "/shop?filter=offers"]]} />
+            ["All Products", "/shop"], ["Dry Fruits & Nuts", "/c/dry-fruit"],
+            ["Spices & Masalas", "/c/spices"], ["Offers", "/shop?filter=offers"]]} />
           <FooterCol title="Help" links={[
-            ["FAQ", "/faq"], ["Shipping", "/shipping"], ["Returns & Refunds", "/returns"],
-            ["Privacy Policy", "/privacy"], ["Terms & Conditions", "/terms"]]} />
+            ["Our Story", "/about"], ["FAQ", "/faq"], ["Shipping", "/shipping"],
+            ["Returns & Refunds", "/returns"], ["Privacy Policy", "/privacy"],
+            ["Terms & Conditions", "/terms"]]} />
           <div>
             <h5 className="mb-4 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-white">Get in Touch</h5>
             <p className="leading-loose">

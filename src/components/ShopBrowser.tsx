@@ -20,9 +20,12 @@ const SORTS: [Sort, string][] = [
 ];
 
 export function ShopBrowser({
-  products, title, lede, crumbs, lockedCategory
+  products, title, lede, crumbs, lockedCategory, children
 }: {
   products: Card[]; title: string; lede?: string; crumbs: Crumb[]; lockedCategory?: string;
+  /** Editorial copy rendered below the grid. A grid of cards is thin content on
+      its own; the prose is what gives a category page something to rank for. */
+  children?: React.ReactNode;
 }) {
   const categories = useMemo(
     () => [...new Set(products.map((p) => p.category))].sort(),
@@ -136,6 +139,8 @@ export function ShopBrowser({
           </div>
         </div>
       </section>
+
+      {children}
     </>
   );
 }

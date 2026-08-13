@@ -7,3 +7,66 @@
 
 [build.environment]
   NODE_VERSION = "20"
+
+# ---------------------------------------------------------------------------
+# Canonical host.
+#
+# houseofcharly.netlify.app used to serve the whole storefront with a 200, so
+# Google could index every page twice and split the ranking signals between two
+# hosts. A 301 to the real domain collapses that: the crawler follows it, the
+# link equity lands on houseofcharly.com, and the netlify.app name stays usable
+# for deploy previews.
+#
+# `force = true` is required — without it Netlify serves the existing page
+# instead of redirecting, because the path exists.
+# ---------------------------------------------------------------------------
+[[redirects]]
+  from = "https://houseofcharly.netlify.app/*"
+  to = "https://houseofcharly.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://houseofcharly.netlify.app/*"
+  to = "https://houseofcharly.com/:splat"
+  status = 301
+  force = true
+
+# ---------------------------------------------------------------------------
+# Headers.
+#
+# Core Web Vitals are a ranking input, and immutable caching on hashed build
+# assets is the cheapest win available: a returning visitor re-downloads nothing.
+# The security headers are not themselves a ranking factor, but HSTS removes the
+# http->https hop that otherwise costs every first-time visitor a round trip.
+# ---------------------------------------------------------------------------
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
+# Hashed filenames — safe to cache for a year.
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Optimised images are keyed by source URL + width + quality.
+[[headers]]
+  for = "/_next/image*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.ico"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

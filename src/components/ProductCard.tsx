@@ -7,7 +7,16 @@ import { ProductImage } from "./ProductImage";
 
 type Card = Product & { variants?: number; fromPrice?: number; familyName?: string };
 
-export function ProductCard({ p }: { p: Card }) {
+/** Describes the photo rather than repeating the link text — what alt is for,
+    and what gets a product photo found in Google Images. */
+export function imageAlt(p: Card) {
+  const bits = [p.name];
+  if (p.weight && !p.name.toLowerCase().includes(p.weight.toLowerCase())) bits.push(p.weight);
+  bits.push(`${p.category.toLowerCase()} pack from House of Charly`);
+  return bits.join(" — ");
+}
+
+export function ProductCard({ p, priority = false }: { p: Card; priority?: boolean }) {
   const { add, qtyOf, setQty } = useCart();
   const s = stockState(p);
   const tone = s.key === "out" ? "text-brick" : s.key === "low" ? "text-amber" : "text-leaf";
@@ -20,7 +29,7 @@ export function ProductCard({ p }: { p: Card }) {
     <article className="group flex flex-col rounded-[3px] border border-line bg-white transition
                         hover:border-[#D6C8B4] hover:shadow-[0_8px_28px_-12px_rgba(20,16,14,0.14)]">
       <Link href={`/p/${p.slug}`} className="relative block aspect-square overflow-hidden bg-cream">
-        <ProductImage src={p.images[0]} alt={`${p.name} — House of Charly`} name={p.name} sub={p.weight} />
+        <ProductImage src={p.images[0]} alt={imageAlt(p)} name={p.name} sub={p.weight} priority={priority} />
         <div className="absolute left-2.5 top-2.5 z-[2] flex flex-col items-start gap-1.5">
           {p.discountPct > 0 && <span className="pill bg-ink text-white">{p.discountPct}% Off</span>}
           {s.key === "low" && <span className="pill bg-amber-soft text-amber">{s.label}</span>}
@@ -110,7 +119,10 @@ export function ProductGrid({ items }: { items: Card[] }) {
   }
   return (
     <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
-      {items.map((p) => <ProductCard key={p.sku} p={p} />)}
+      {/* On a category or search page the first row of cards *is* the largest
+          contentful paint. Eager-loading only those four keeps LCP fast without
+          the bandwidth cost of prioritising a whole 75-card grid. */}
+      {items.map((p, i) => <ProductCard key={p.sku} p={p} priority={i < 4} />)}
     </div>
   );
 }

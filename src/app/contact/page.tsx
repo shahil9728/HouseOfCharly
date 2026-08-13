@@ -2,11 +2,17 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SITE } from "@/lib/site";
 import { waLink } from "@/lib/whatsapp";
+import { JsonLd } from "@/lib/seo";
+
+const TITLE = "Contact Us — Bulk Orders, Deliveries & Product Questions";
+const DESCRIPTION =
+  "Call, WhatsApp or email House of Charly for product questions, bulk and gifting quotes, or help with an existing order. We reply personally.";
 
 export const metadata: Metadata = {
-  title: "Contact Us",
-  description: "Questions about a product, a bulk order or a delivery? Reach House of Charly.",
-  alternates: { canonical: "/contact" }
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/contact" },
+  openGraph: { type: "website", url: `${SITE.url}/contact`, title: TITLE, description: DESCRIPTION }
 };
 
 export default function ContactPage() {
@@ -34,6 +40,23 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+
+      {/* ContactPage tells Google this is the canonical place to reach the
+          business, and the mainEntity reference attaches the phone and email
+          already declared once in the organisation node. */}
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ContactPage",
+          "@id": `${SITE.url}/contact#contact`,
+          name: TITLE,
+          description: DESCRIPTION,
+          url: `${SITE.url}/contact`,
+          inLanguage: "en-IN",
+          isPartOf: { "@id": `${SITE.url}/#website` },
+          mainEntity: { "@id": `${SITE.url}/#organization` }
+        }}
+      />
     </>
   );
 }

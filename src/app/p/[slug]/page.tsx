@@ -6,6 +6,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ProductGrid } from "@/components/ProductCard";
 import { ProductDetail } from "@/components/ProductDetail";
 import { SITE } from "@/lib/site";
+import { JsonLd, productSchema } from "@/lib/seo";
 
 export const revalidate = 300;
 
@@ -17,17 +18,46 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const p = await getProduct(slug);
-  if (!p) return { title: "Product not found" };
+  /* A missing product must not be indexable under its old URL — an item code
+     changing in the sheet would otherwise leave a soft 404 in the index. */
+  if (!p) return { title: "Product not found", robots: { index: false, follow: true } };
+
+  const title = p.seoTitle || `${p.name} — Buy Online at Best Price | House of Charly`;
+
+  /* Descriptions are what actually earn the click. When the sheet has no SEO
+     copy, build one from the facts we do hold — price, weight, category — rather
+     than emitting a bare "Buy X" that reads like a placeholder. */
+  const priceBit = p.price > 0 ? ` Price ₹${p.price}${p.weight ? ` for ${p.weight}` : ""}.` : "";
+  const description =
+    p.seoDescription ||
+    p.shortDescription ||
+    `Buy ${p.name} online from House of Charly — sourced from Jammu, freshly packed in small batches.${priceBit} Free delivery over ₹${SITE.freeShippingOver}.`;
+
   return {
-    title: { absolute: p.seoTitle || `${p.name} — Buy Online | House of Charly` },
-    description: p.seoDescription || p.shortDescription || `Buy ${p.name} from House of Charly.`,
+    title: { absolute: title },
+    description,
     alternates: { canonical: `/p/${p.slug}` },
     openGraph: {
       type: "website",
-      title: { absolute: p.seoTitle || `${p.name} — Buy Online | House of Charly` },
-      description: p.seoDescription || p.shortDescription,
-      images: p.images.length ? [{ url: p.images[0] }] : undefined
-    }
+      url: `${SITE.url}/p/${p.slug}`,
+      title: { absolute: title },
+      description,
+      images: p.images.length
+        ? [{ url: p.images[0], alt: `${p.name} — ${SITE.name}` }]
+        : undefined
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: { absolute: title },
+      description,
+      images: p.images.length ? [p.images[0]] : undefined
+    },
+    /* Facebook/WhatsApp product annotations. WhatsApp previews are how most of
+       this store's links are actually shared, so the price is worth carrying. */
+    other:
+      p.price > 0
+        ? { "product:price:amount": String(p.price), "product:price:currency": "INR" }
+        : {}
   };
 }
 
@@ -43,20 +73,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     byFamily(live.filter((x) => x.category === p.category && x.family !== p.family && x.stock > 0))
       .sort((a, b) => Number(b.images.length > 0) - Number(a.images.length > 0) || a.name.localeCompare(b.name))
   ).slice(0, 4);
-
-  const ld = {
-    "@context": "https://schema.org", "@type": "Product",
-    name: p.name, sku: p.sku, category: p.category,
-    description: p.longDescription || p.shortDescription || undefined,
-    image: p.images.length ? p.images : undefined,
-    brand: { "@type": "Brand", name: SITE.name },
-    offers: {
-      "@type": "Offer", price: p.price, priceCurrency: "INR",
-      availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      url: `${SITE.url}/p/${p.slug}`,
-      seller: { "@type": "Organization", name: SITE.name }
-    }
-  };
 
   return (
     <>
@@ -84,7 +100,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </section>
       )}
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      {/* Passing the siblings lets the schema declare a ProductGroup when the
+          item has several pack sizes, so Google shows one result with a price
+          range instead of six near-identical results competing with each other. */}
+      <JsonLd data={productSchema(p, sizes)} />
     </>
   );
 }

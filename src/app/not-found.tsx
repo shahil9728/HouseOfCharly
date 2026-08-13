@@ -1,4 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+/* A 404 must never be indexable. Next already serves the correct HTTP status,
+   which is what Google actually acts on, but the explicit noindex closes the
+   gap for crawlers that render before reading the status line. */
+export const metadata: Metadata = {
+  title: "Page not found",
+  robots: { index: false, follow: true }
+};
 
 export default function NotFound() {
   return (
@@ -13,6 +22,15 @@ export default function NotFound() {
           <Link href="/shop" className="btn-primary">Shop all products</Link>
           <Link href="/" className="btn-ghost">Back home</Link>
         </div>
+
+        {/* Links out of a dead end recover the visit and keep the crawler moving
+            through the catalogue instead of stopping here. */}
+        <p className="mt-9 text-[14px] text-muted">
+          Try{" "}
+          <Link href="/c/dry-fruit" className="border-b border-amber pb-0.5 text-ink">dry fruits &amp; nuts</Link>,{" "}
+          <Link href="/c/spices" className="border-b border-amber pb-0.5 text-ink">spices &amp; masalas</Link>, or{" "}
+          <Link href="/faq" className="border-b border-amber pb-0.5 text-ink">our FAQs</Link>.
+        </p>
       </div>
     </section>
   );

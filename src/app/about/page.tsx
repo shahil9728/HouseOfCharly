@@ -3,11 +3,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HERO_SLIDES } from "@/lib/slides";
+import { SITE } from "@/lib/site";
+import { JsonLd } from "@/lib/seo";
+
+const TITLE = "Our Story — Dry Fruits Sourced Direct from Jammu";
+const DESCRIPTION =
+  "House of Charly brings authentic dry fruits, nuts and spices directly from trusted farms in Jammu to families across India — cleaned, sorted and packed in small batches.";
 
 export const metadata: Metadata = {
-  title: "Our Story",
-  description: "House of Charly brings authentic dry fruits and spices directly from Jammu to families across India.",
-  alternates: { canonical: "/about" }
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/about" },
+  openGraph: { type: "website", url: `${SITE.url}/about`, title: TITLE, description: DESCRIPTION }
 };
 
 export default function AboutPage() {
@@ -52,6 +59,20 @@ export default function AboutPage() {
           <Link href="/shop" className="btn-primary mt-7">Shop the collection</Link>
         </div>
       </section>
+
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "AboutPage",
+          "@id": `${SITE.url}/about#about`,
+          name: TITLE,
+          description: DESCRIPTION,
+          url: `${SITE.url}/about`,
+          inLanguage: "en-IN",
+          isPartOf: { "@id": `${SITE.url}/#website` },
+          mainEntity: { "@id": `${SITE.url}/#organization` }
+        }}
+      />
     </>
   );
 }

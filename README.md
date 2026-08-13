@@ -1,7 +1,10 @@
 # House of Charly — Storefront
 
 Production storefront for [houseofcharly.com](https://houseofcharly.com). Next.js App Router,
-Google Sheets as the product database, WhatsApp checkout.
+Google Sheets as the product database, Razorpay + Cash on Delivery checkout.
+
+> **SEO:** see [`docs/SEO.md`](docs/SEO.md) for what the code does and the
+> owner's Search Console / Business Profile checklist.
 
 ---
 
@@ -27,8 +30,15 @@ npm run dev                    # http://localhost:3000
    **Site settings → Environment variables**. At minimum `SHEET_ID`.
 4. Deploy. Then **Domain settings → Add custom domain →** `houseofcharly.com`.
 
-> The current site is served from GitHub Pages, which is static-only and cannot
-> render product pages on the server. Moving to Netlify is what makes the SEO work.
+> **Canonical host.** `houseofcharly.com` is the only host that should serve a
+> 200. `netlify.toml` 301-redirects `houseofcharly.netlify.app` to it, because two
+> hosts serving the same pages splits the ranking between them. Deploy previews
+> (`deploy-preview-*--houseofcharly.netlify.app`) don't match the rule and keep
+> working. If you add another domain, redirect it here too — don't serve from it.
+>
+> `NEXT_PUBLIC_SITE_URL`, if set, must be exactly `https://houseofcharly.com`
+> with no trailing slash: it is the base for every canonical tag, every sitemap
+> URL and every schema `@id`. Wrong value there quietly breaks all three.
 
 ---
 
