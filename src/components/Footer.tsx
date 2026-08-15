@@ -41,15 +41,18 @@ export function Footer() {
               </a>
             </p>
             {SITE.social.length > 0 && (
-              <p className="mt-4 flex gap-4">
-                {SITE.social.map((href) => (
-                  <a key={href} href={href} target="_blank" rel="noopener noreferrer"
-                    aria-label={href.includes("instagram") ? "House of Charly on Instagram" : "House of Charly on social media"}
-                    className="hover:text-amber-light">
-                    {href.includes("instagram") ? "Instagram" : href.includes("facebook") ? "Facebook"
-                      : href.includes("youtube") ? "YouTube" : href.includes("linkedin") ? "LinkedIn" : "Follow us"}
-                  </a>
-                ))}
+              <p className="mt-4 flex flex-wrap items-center gap-4">
+                {SITE.social.map((href) => {
+                  const platform = platformOf(href);
+                  return (
+                    <a key={href} href={href} target="_blank" rel="noopener noreferrer"
+                      aria-label={`House of Charly on ${platform.label}`}
+                      className="inline-flex items-center gap-1.5 hover:text-amber-light">
+                      <SocialIcon platform={platform.key} />
+                      {platform.label}
+                    </a>
+                  );
+                })}
               </p>
             )}
           </div>
@@ -61,6 +64,64 @@ export function Footer() {
       </div>
     </footer>
   );
+}
+
+type SocialKey = "instagram" | "facebook" | "youtube" | "linkedin" | "other";
+
+/** Matches a profile URL to a platform so the right icon and label render
+    without hand-listing every social field separately. */
+function platformOf(href: string): { key: SocialKey; label: string } {
+  if (href.includes("instagram")) return { key: "instagram", label: "Instagram" };
+  if (href.includes("facebook")) return { key: "facebook", label: "Facebook" };
+  if (href.includes("youtube")) return { key: "youtube", label: "YouTube" };
+  if (href.includes("linkedin")) return { key: "linkedin", label: "LinkedIn" };
+  return { key: "other", label: "Follow us" };
+}
+
+/* Inline SVGs rather than an icon-font or image sprite: no extra request, no
+   layout shift while a font loads, and they inherit `currentColor` so the
+   amber hover state on the link works for free. `aria-hidden` because the
+   link's own text/aria-label already names the platform. */
+function SocialIcon({ platform }: { platform: SocialKey }) {
+  const common = { width: 17, height: 17, viewBox: "0 0 24 24", "aria-hidden": true } as const;
+  switch (platform) {
+    case "instagram":
+      return (
+        <svg {...common} fill="none" stroke="currentColor" strokeWidth="1.8">
+          <rect x="3" y="3" width="18" height="18" rx="5" />
+          <circle cx="12" cy="12" r="4" />
+          <circle cx="17.2" cy="6.8" r="1.15" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "facebook":
+      return (
+        <svg {...common} fill="currentColor" stroke="none">
+          <path d="M14.5 21v-7.2h2.4l.45-3h-2.85V9c0-.82.23-1.38 1.4-1.38h1.5V5c-.3-.04-1.33-.13-2.53-.13-2.5 0-4.2 1.53-4.2 4.35v2.58H8.3v3h2.4V21h3.8z" />
+        </svg>
+      );
+    case "youtube":
+      return (
+        <svg {...common} fill="none" stroke="currentColor" strokeWidth="1.8">
+          <rect x="2.5" y="5.5" width="19" height="13" rx="4" />
+          <path d="M10.5 9.3l5 2.7-5 2.7z" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "linkedin":
+      return (
+        <svg {...common} fill="currentColor" stroke="none">
+          <rect x="3" y="3" width="18" height="18" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+          <circle cx="7.2" cy="8" r="1.15" />
+          <path d="M6.2 10.6h2v7.4h-2v-7.4zm4 0h1.9v1c.5-.75 1.3-1.2 2.3-1.2 1.85 0 2.9 1.2 2.9 3.5v4.1h-2v-3.7c0-1-.4-1.7-1.35-1.7-.75 0-1.2.5-1.4 1-.08.2-.1.45-.1.75v3.65h-2v-7.4z" />
+        </svg>
+      );
+    default:
+      return (
+        <svg {...common} fill="none" stroke="currentColor" strokeWidth="1.8">
+          <circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" />
+          <path d="M8.3 10.8l7.4-4.1M8.3 13.2l7.4 4.1" />
+        </svg>
+      );
+  }
 }
 
 function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
