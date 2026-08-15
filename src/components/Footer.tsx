@@ -27,34 +27,42 @@ export function Footer() {
             ["Terms & Conditions", "/terms"]]} />
           <div>
             <h5 className="mb-4 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-white">Get in Touch</h5>
-            <p className="leading-loose">
-              <a href={`tel:${SITE.phoneRaw}`} className="hover:text-amber-light">{SITE.phone}</a><br />
-              <a href={`mailto:${SITE.email}`} className="hover:text-amber-light">{SITE.email}</a><br />
-              <Link href="/contact" className="hover:text-amber-light">Contact us</Link>
-            </p>
-            {/* A crawlable anchor to the Business Profile does real work the
-                schema alone can't: it's a direct citation Google can follow, and
-                for a visitor it's one tap to directions. */}
-            <p className="mt-3.5 leading-loose">
-              <a href={SITE.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-amber-light">
-                {SITE.street}, {SITE.locality}, {SITE.region} {SITE.postalCode}
-              </a>
-            </p>
-            {SITE.social.length > 0 && (
-              <p className="mt-4 flex flex-wrap items-center gap-4">
-                {SITE.social.map((href) => {
-                  const platform = platformOf(href);
-                  return (
-                    <a key={href} href={href} target="_blank" rel="noopener noreferrer"
-                      aria-label={`House of Charly on ${platform.label}`}
-                      className="inline-flex items-center gap-1.5 hover:text-amber-light">
-                      <SocialIcon platform={platform.key} />
+            {/* One flex column with a single, even gap for every row — the
+                previous version mixed leading-loose text with ad-hoc margins
+                between paragraphs, which reads as unaligned next to the clean
+                lists in "Shop" and "Help". Every row now follows the same
+                icon-plus-text pattern, so the eye has one rhythm to track
+                instead of three. */}
+            <div className="flex flex-col gap-3">
+              <ContactRow icon={<PhoneIcon />}>
+                <a href={`tel:${SITE.phoneRaw}`} className="hover:text-amber-light">{SITE.phone}</a>
+              </ContactRow>
+              <ContactRow icon={<MailIcon />}>
+                <a href={`mailto:${SITE.email}`} className="hover:text-amber-light break-all">{SITE.email}</a>
+              </ContactRow>
+              <ContactRow icon={<MessageIcon />}>
+                <Link href="/contact" className="hover:text-amber-light">Contact us</Link>
+              </ContactRow>
+              {/* A crawlable anchor to the Business Profile does real work the
+                  schema alone can't: it's a direct citation Google can follow,
+                  and for a visitor it's one tap to directions. */}
+              <ContactRow icon={<PinIcon />}>
+                <a href={SITE.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-amber-light">
+                  {SITE.street}, {SITE.locality}, {SITE.region} {SITE.postalCode}
+                </a>
+              </ContactRow>
+              {SITE.social.map((href) => {
+                const platform = platformOf(href);
+                return (
+                  <ContactRow key={href} icon={<SocialIcon platform={platform.key} />}>
+                    <a href={href} target="_blank" rel="noopener noreferrer"
+                      aria-label={`House of Charly on ${platform.label}`} className="hover:text-amber-light">
                       {platform.label}
                     </a>
-                  );
-                })}
-              </p>
-            )}
+                  </ContactRow>
+                );
+              })}
+            </div>
           </div>
         </div>
         <div className="mt-12 flex flex-wrap justify-between gap-4 border-t border-white/10 pt-5 text-[12px]">
@@ -63,6 +71,53 @@ export function Footer() {
         </div>
       </div>
     </footer>
+  );
+}
+
+/** One icon + one row of text, aligned to the icon's top so a wrapping
+    address still lines up with the icon instead of drifting to centre. */
+function ContactRow({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="mt-[1px] shrink-0 text-faint">{icon}</span>
+      <span>{children}</span>
+    </div>
+  );
+}
+
+const iconProps = { width: 15, height: 15, viewBox: "0 0 24 24", "aria-hidden": true } as const;
+
+function PhoneIcon() {
+  return (
+    <svg {...iconProps} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1.5 1.5 0 0 1 1.5-.4c1.2.4 2.5.6 3.8.6a1.3 1.3 0 0 1 1.3 1.3v3.5A1.3 1.3 0 0 1 20.7 21C11 21 3 13 3 3.3A1.3 1.3 0 0 1 4.3 2h3.5A1.3 1.3 0 0 1 9.1 3.3c0 1.3.2 2.6.6 3.8a1.5 1.5 0 0 1-.4 1.5z" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg {...iconProps} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.5" y="5" width="19" height="14" rx="2.3" />
+      <path d="M3.5 6.5l8.5 6.5 8.5-6.5" />
+    </svg>
+  );
+}
+
+function MessageIcon() {
+  return (
+    <svg {...iconProps} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4.5h16v11.5H9.2L5 20V16H4V4.5z" />
+    </svg>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg {...iconProps} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 21.5S5 15.3 5 9.9a7 7 0 1 1 14 0c0 5.4-7 11.6-7 11.6z" />
+      <circle cx="12" cy="9.8" r="2.4" />
+    </svg>
   );
 }
 
@@ -83,7 +138,7 @@ function platformOf(href: string): { key: SocialKey; label: string } {
    amber hover state on the link works for free. `aria-hidden` because the
    link's own text/aria-label already names the platform. */
 function SocialIcon({ platform }: { platform: SocialKey }) {
-  const common = { width: 17, height: 17, viewBox: "0 0 24 24", "aria-hidden": true } as const;
+  const common = { width: 15, height: 15, viewBox: "0 0 24 24", "aria-hidden": true } as const;
   switch (platform) {
     case "instagram":
       return (
