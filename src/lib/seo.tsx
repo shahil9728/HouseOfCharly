@@ -60,6 +60,13 @@ export function organizationSchema() {
     telephone: SITE.phoneRaw,
     email: SITE.email,
     address: postalAddress(),
+    /* `geo` + `hasMap` are what let Google resolve this to the exact pin on the
+       owner's Business Profile rather than inferring a rough location from the
+       address text — the difference between showing up on Maps and not. */
+    geo: SITE.geo
+      ? { "@type": "GeoCoordinates", latitude: SITE.geo.lat, longitude: SITE.geo.lng }
+      : undefined,
+    hasMap: SITE.googleMapsUrl || undefined,
     areaServed: { "@type": "Country", name: "India" },
     currenciesAccepted: "INR",
     paymentAccepted: "UPI, Credit Card, Debit Card, Net Banking, Cash on Delivery",

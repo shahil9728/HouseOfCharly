@@ -177,33 +177,30 @@ bother doing this for all 129 products — the sitemap handles those.
 4. **Deploys → Trigger deploy → Clear cache and deploy site** (not a plain
    redeploy — Next caches the catalogue between builds).
 
-### Step 5 — Create a Google Business Profile (30 minutes, high value)
+### Step 5 — Google Business Profile ✅ done
 
-This is the single biggest remaining win, and it is not a website change.
+Your shop's real address — Shop No. 7, TCP2, Sainik Adarsh Enclave, Hisar,
+Haryana 125006 — and Google Maps listing are now in the site's structured data
+(`OnlineStore.address`, `geo`, `hasMap` in `src/lib/seo.tsx`), and the address is
+printed and linked in the footer of every page. If the profile isn't live yet
+on https://business.google.com, create one — it's what puts you in Google Maps
+and the local pack for "dry fruits shop near me", which for a shop with a real
+walk-in address is often more traffic than the whole website. Use the exact
+same name ("House of Charly"), phone and address as the site — Google
+cross-checks them, and a mismatch anywhere weakens all of them.
 
-Go to https://business.google.com and create a profile for House of Charly. It's
-free. It's what puts you in Google Maps and in the local pack for searches like
-"dry fruits shop near me" — and for a shop with a real Jammu address, that is
-often more traffic than the whole website.
+If the shop ever relocates, update `NEXT_PUBLIC_STREET_ADDRESS`,
+`NEXT_PUBLIC_LOCALITY`, `NEXT_PUBLIC_REGION` and `NEXT_PUBLIC_POSTAL_CODE` in
+Netlify — they override the hard-coded default in `src/lib/site.ts`.
 
-You'll need: business name (exactly "House of Charly"), category ("Dry fruit
-store" or "Spice store"), phone, address, hours, and a few photos. Use the same
-phone number as the website — Google cross-checks them.
+### Step 6 — Social links ✅ Instagram done
 
-Once it's live, send me the address and I'll add it to the site's structured data
-(`NEXT_PUBLIC_STREET_ADDRESS` and `NEXT_PUBLIC_POSTAL_CODE` in Netlify). Right
-now the site can only say "Jammu, Jammu and Kashmir" because I don't have the
-street — and a *wrong* address is worse than a missing one.
-
-### Step 6 — Add your social links (5 minutes)
-
-If you have Instagram or Facebook pages, add them in Netlify → Environment
-variables. They feed the `sameAs` field, which is how Google connects the website
-to those accounts and decides you are one real brand:
+`https://www.instagram.com/houseofcharly.in/` is now in the site's `sameAs`
+schema and linked from the footer. If you add a Facebook or YouTube page, send
+me the link, or add it yourself in Netlify → Environment variables:
 
 | Variable | Example |
 |---|---|
-| `NEXT_PUBLIC_INSTAGRAM_URL` | `https://www.instagram.com/houseofcharly` |
 | `NEXT_PUBLIC_FACEBOOK_URL` | `https://www.facebook.com/houseofcharly` |
 | `NEXT_PUBLIC_YOUTUBE_URL` | (if you have one) |
 

@@ -32,6 +32,26 @@ export function Footer() {
               <a href={`mailto:${SITE.email}`} className="hover:text-amber-light">{SITE.email}</a><br />
               <Link href="/contact" className="hover:text-amber-light">Contact us</Link>
             </p>
+            {/* A crawlable anchor to the Business Profile does real work the
+                schema alone can't: it's a direct citation Google can follow, and
+                for a visitor it's one tap to directions. */}
+            <p className="mt-3.5 leading-loose">
+              <a href={SITE.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-amber-light">
+                {SITE.street}, {SITE.locality}, {SITE.region} {SITE.postalCode}
+              </a>
+            </p>
+            {SITE.social.length > 0 && (
+              <p className="mt-4 flex gap-4">
+                {SITE.social.map((href) => (
+                  <a key={href} href={href} target="_blank" rel="noopener noreferrer"
+                    aria-label={href.includes("instagram") ? "House of Charly on Instagram" : "House of Charly on social media"}
+                    className="hover:text-amber-light">
+                    {href.includes("instagram") ? "Instagram" : href.includes("facebook") ? "Facebook"
+                      : href.includes("youtube") ? "YouTube" : href.includes("linkedin") ? "LinkedIn" : "Follow us"}
+                  </a>
+                ))}
+              </p>
+            )}
           </div>
         </div>
         <div className="mt-12 flex flex-wrap justify-between gap-4 border-t border-white/10 pt-5 text-[12px]">
