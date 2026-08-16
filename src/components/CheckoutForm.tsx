@@ -22,6 +22,12 @@ const RULES: [keyof OrderCustomer, (v: string) => boolean, string][] = [
 
 type Method = "razorpay" | "cod";
 
+/** Shape of Razorpay's `payment.failed` event. Every field is optional because
+    it arrives from a third party's script — assume nothing is present. */
+interface RazorpayFailure {
+  error?: { code?: string; description?: string; reason?: string; step?: string; source?: string };
+}
+
 /** Razorpay's checkout script, loaded only when someone actually pays online. */
 function loadRazorpay(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -95,7 +101,12 @@ export function CheckoutForm({ onlineEnabled }: { onlineEnabled: boolean }) {
 
     if (!(await loadRazorpay())) throw new Error("Could not reach the payment provider. Check your connection.");
 
-    const RazorpayCtor = (window as unknown as { Razorpay: new (o: unknown) => { open: () => void } }).Razorpay;
+    const RazorpayCtor = (window as unknown as {
+      Razorpay: new (o: unknown) => {
+        open: () => void;
+        on: (event: "payment.failed", cb: (e: RazorpayFailure) => void) => void;
+      };
+    }).Razorpay;
     const rzp = new RazorpayCtor({
       key: order.keyId,
       order_id: order.orderId,
@@ -136,6 +147,26 @@ export function CheckoutForm({ onlineEnabled }: { onlineEnabled: boolean }) {
         }
       }
     });
+    /* A declined card, a failed UPI collect or an expired VPA does NOT call the
+       success handler and does NOT dismiss the modal — without this listener the
+       customer sits on a spinner with no idea what happened, and `busy` is never
+       cleared, so they cannot even retry. Razorpay's own reason is far more
+       useful than anything we could invent ("insufficient funds", "payment
+       declined by bank"), so show it verbatim when they give us one. */
+    rzp.on("payment.failed", (e) => {
+      setBusy(false);
+      const reason = e?.error?.description || "The payment did not go through.";
+      setFailure(
+        `${reason} Nothing has been charged and your cart is safe — try again, or choose Cash on Delivery.`
+      );
+      track("payment_failed", {
+        transaction_id: order.ref,
+        value: order.total,
+        currency: "INR",
+        reason: e?.error?.reason || e?.error?.code || "unknown"
+      });
+    });
+
     rzp.open();
   };
 

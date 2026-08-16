@@ -283,14 +283,33 @@ function buildOrdersSheet_(applyRules) {
      order will read hours off. Change under File → Settings if you disagree. */
   if (ss.getSpreadsheetTimeZone() !== "Asia/Kolkata") ss.setSpreadsheetTimeZone("Asia/Kolkata");
 
+  var labels = COLS.map(function (c) { return c.label; });
+
   var sheet = ss.getSheetByName(TAB);
   var fresh = false;
+
+  /* An Orders tab from an earlier version of this script has different columns
+     in a different order — its "Payment Method" sits where "Status" now lives.
+     Rewriting the header over the top would leave every existing row quietly
+     mislabelled, with "cod" showing as an order status. Move the old tab aside
+     instead: nothing is deleted, and the history stays readable. */
+  if (sheet && sheet.getLastRow() > 0) {
+    var firstHeader = String(sheet.getRange(1, 1).getValue()).trim();
+    if (firstHeader && firstHeader !== labels[0]) {
+      if (sheet.getLastRow() > 1) {
+        var stamp = Utilities.formatDate(new Date(), "Asia/Kolkata", "dd-MMM-yy HHmm");
+        sheet.setName(TAB + " (old " + stamp + ")");
+        sheet = null;                       // fall through and build a clean one
+      } else {
+        sheet.clear();                      // header-only: nothing worth keeping
+      }
+    }
+  }
+
   if (!sheet) {
     sheet = ss.insertSheet(TAB, 0);   // first tab — this is the one you live in
     fresh = true;
   }
-
-  var labels = COLS.map(function (c) { return c.label; });
 
   // Header: rewritten every time, so adding a column above just works.
   var header = sheet.getRange(1, 1, 1, COLS.length);

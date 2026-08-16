@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { priceOrder, createRazorpayOrder, razorpayReady, publicKeyId, orderRef, type CartInput } from "@/lib/order";
+import {
+  priceOrder, createRazorpayOrder, razorpayReady, publicKeyId, orderRef,
+  RazorpayError, RAZORPAY_MIN_PAISE, type CartInput
+} from "@/lib/order";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,8 +23,12 @@ export async function POST(req: Request) {
     if (priced.problems.length) {
       return NextResponse.json({ error: priced.problems[0], problems: priced.problems }, { status: 409 });
     }
-    if (priced.total <= 0) {
-      return NextResponse.json({ error: "Order total must be greater than zero." }, { status: 400 });
+    // Razorpay rejects anything under ₹1; fail here with a readable message.
+    if (Math.round(priced.total * 100) < RAZORPAY_MIN_PAISE) {
+      return NextResponse.json(
+        { error: `Order total must be at least ₹${RAZORPAY_MIN_PAISE / 100}.` },
+        { status: 400 }
+      );
     }
 
     const ref = orderRef();
@@ -42,6 +49,20 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[checkout] create-order failed:", err);
+
+    /* Surface the gateway's own status so a misconfiguration is diagnosable
+       from the network tab instead of looking like a generic outage. The
+       customer-facing wording stays vague either way — our credentials are not
+       their problem, and naming them would leak how the shop is wired. */
+    if (err instanceof RazorpayError) {
+      const message =
+        err.status === 401
+          ? "Online payment is temporarily unavailable. Please choose Cash on Delivery, or call us."
+          : err.status === 400
+            ? err.message
+            : "Could not start payment. Please try again.";
+      return NextResponse.json({ error: message }, { status: err.status });
+    }
     return NextResponse.json({ error: "Could not start payment. Please try again." }, { status: 500 });
   }
 }

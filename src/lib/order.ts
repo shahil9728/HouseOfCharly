@@ -79,8 +79,29 @@ export function publicKeyId() {
   return KEY_ID;
 }
 
+/** Razorpay rejects anything under ₹1. Guard here so the failure is ours and
+    legible, rather than a 400 from their API with a customer watching. */
+export const RAZORPAY_MIN_PAISE = 100;
+
+/** Carries the upstream HTTP status so the route can tell "your keys are wrong"
+    (401) apart from "Razorpay is having a bad day" (5xx). Those need different
+    reactions: one is a five-minute fix, the other is wait and retry. */
+export class RazorpayError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "RazorpayError";
+    this.status = status;
+  }
+}
+
 export async function createRazorpayOrder(amountInRupees: number, receipt: string, notes: Record<string, string>) {
-  if (!razorpayReady()) throw new Error("Razorpay keys are not configured");
+  if (!razorpayReady()) throw new RazorpayError("Razorpay keys are not configured", 503);
+
+  const paise = Math.round(amountInRupees * 100);
+  if (!Number.isFinite(paise) || paise < RAZORPAY_MIN_PAISE) {
+    throw new RazorpayError(`Order total must be at least ₹${RAZORPAY_MIN_PAISE / 100}`, 400);
+  }
 
   const res = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
@@ -89,7 +110,7 @@ export async function createRazorpayOrder(amountInRupees: number, receipt: strin
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      amount: Math.round(amountInRupees * 100),   // paise, integer
+      amount: paise,   // paise, integer
       currency: "INR",
       receipt,
       notes
@@ -99,7 +120,18 @@ export async function createRazorpayOrder(amountInRupees: number, receipt: strin
 
   if (!res.ok) {
     const detail = await res.text();
-    throw new Error(`Razorpay order creation failed (${res.status}): ${detail.slice(0, 300)}`);
+    /* 401 means the key id and secret don't match a Razorpay account — almost
+       always a typo, a test key against live mode, or a variable that never
+       made it into the host's environment. Worth naming explicitly; it is the
+       single most common integration failure. */
+    if (res.status === 401) {
+      console.error("[razorpay] 401 — RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are wrong or not set for this mode.");
+      throw new RazorpayError("Payment gateway rejected our credentials.", 401);
+    }
+    throw new RazorpayError(
+      `Razorpay order creation failed (${res.status}): ${detail.slice(0, 300)}`,
+      res.status >= 500 ? 502 : 500
+    );
   }
   return (await res.json()) as { id: string; amount: number; currency: string };
 }
