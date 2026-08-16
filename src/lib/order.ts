@@ -2,6 +2,9 @@ import "server-only";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { getProducts } from "./sheet";
 import { SITE } from "./site";
+import { notifyOrder, type OrderRecord } from "./notify";
+
+export type { OrderRecord } from "./notify";
 
 /* ---------------------------------------------------------------------------
  * Server-side order pricing and Razorpay plumbing.
@@ -131,24 +134,21 @@ export function orderRef() {
 }
 
 /**
- * Optional: POST the order somewhere durable (a Google Apps Script bound to the
- * sheet, a Zapier hook, anything that accepts JSON). Never throws — a logging
- * outage must not lose a paid order.
+ * Records and announces a placed order.
+ *
+ * This used to POST to a single optional webhook and, when that was unset, do
+ * nothing but write a warning — which is how the shop ended up taking Cash on
+ * Delivery orders whose only trace was a rolling server log. It now fans out to
+ * every configured channel (sheet + email + Telegram); see lib/notify.
+ *
+ * Still never throws. The customer has already committed by the time we reach
+ * here, so a notification problem is ours to fix, not theirs to be shown.
  */
-export async function recordOrder(payload: unknown) {
-  const url = process.env.ORDERS_WEBHOOK_URL;
-  if (!url) {
-    console.warn("[order] ORDERS_WEBHOOK_URL not set — order not persisted:", JSON.stringify(payload));
-    return;
-  }
+export async function recordOrder(payload: OrderRecord) {
   try {
-    await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      cache: "no-store"
-    });
+    await notifyOrder(payload);
   } catch (err) {
-    console.error("[order] failed to record order:", err);
+    // notifyOrder is already defensive; this is the belt to its braces.
+    console.error("[order] notification fan-out threw unexpectedly:", err, JSON.stringify(payload));
   }
 }

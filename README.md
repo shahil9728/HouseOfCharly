@@ -168,7 +168,9 @@ by a missing variable.
 |---|---|---|
 | `RAZORPAY_KEY_ID` | server | Also sent to the browser to open checkout — public by design. |
 | `RAZORPAY_KEY_SECRET` | server | **Never** prefix with `NEXT_PUBLIC_`. Signs and verifies payments. |
-| `ORDERS_WEBHOOK_URL` | server | Any JSON POST endpoint. See `docs/orders-apps-script.js`. |
+| `ORDERS_WEBHOOK_URL` | server | Apps Script `/exec` URL — sheet + email. See `docs/ORDER-NOTIFICATIONS.md`. |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | server | Instant free order alerts on your phone. |
+| `RESEND_API_KEY` | server | HTML order emails. Optional `ORDER_EMAIL_TO` / `ORDER_EMAIL_FROM`. |
 
 ### The two rules this code exists to enforce
 
@@ -195,13 +197,27 @@ COD      → /api/checkout/cod            (server prices, records) → /order/su
 The cart is cleared **only** on the success page, so an abandoned or failed
 payment leaves the basket intact.
 
-### Recording orders
+### Recording and announcing orders
 
-Without `ORDERS_WEBHOOK_URL`, orders are written to the server log only. Paid
-orders are still recoverable from the Razorpay dashboard, but **COD orders are
-not recoverable** — set this before taking COD orders. `docs/orders-apps-script.js`
-is a ready-to-deploy Google Apps Script that appends each order to an "Orders"
-tab and emails you.
+Every placed order goes through `recordOrder()` → `notifyOrder()` in
+`src/lib/notify.ts`, which fans out **in parallel** to whichever channels are
+configured: the Apps Script webhook (sheet + email), Resend (HTML email) and
+Telegram (instant push). Setup for each is in
+[`docs/ORDER-NOTIFICATIONS.md`](docs/ORDER-NOTIFICATIONS.md).
+
+Three invariants worth preserving if you touch this:
+
+1. **A notification failure must never fail the order.** The customer has
+   already committed; a broken integration is ours to fix, not theirs to see.
+   Everything in `notify.ts` swallows its own errors.
+2. **Every channel is time-boxed** (8s). A hung endpoint must not hold a
+   customer on a spinner.
+3. **If all channels fail, the full order is logged as JSON** so it stays
+   recoverable from the host's function logs. A safety net, not a plan.
+
+With **no** channel configured, that log line is the only copy of the order —
+paid orders are still recoverable from the Razorpay dashboard, but **COD orders
+are not.** Configure at least one channel before taking COD orders.
 
 ## Images
 
