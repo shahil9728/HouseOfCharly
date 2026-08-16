@@ -168,7 +168,8 @@ by a missing variable.
 |---|---|---|
 | `RAZORPAY_KEY_ID` | server | Also sent to the browser to open checkout — public by design. |
 | `RAZORPAY_KEY_SECRET` | server | **Never** prefix with `NEXT_PUBLIC_`. Signs and verifies payments. |
-| `ORDERS_WEBHOOK_URL` | server | Apps Script `/exec` URL — sheet + email. See `docs/ORDER-NOTIFICATIONS.md`. |
+| `ORDERS_WEBHOOK_URL` | server | Apps Script `/exec` URL — Orders tab + email. See `docs/ORDER-NOTIFICATIONS.md`. |
+| `ORDERS_WEBHOOK_SECRET` | server | Shared secret; must match `SHARED_SECRET` in the Apps Script. |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | server | Instant free order alerts on your phone. |
 | `RESEND_API_KEY` | server | HTML order emails. Optional `ORDER_EMAIL_TO` / `ORDER_EMAIL_FROM`. |
 

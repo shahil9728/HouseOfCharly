@@ -174,18 +174,51 @@ async function post(url: string, init: RequestInit): Promise<Response> {
   return fetch(url, { ...init, cache: "no-store", signal: AbortSignal.timeout(CHANNEL_TIMEOUT_MS) });
 }
 
-/** The durable record: Apps Script appends to the sheet AND emails a copy. */
+/** The durable record: Apps Script writes the order into the sheet's "Orders"
+    tab (newest first, with a status workflow) and emails a copy. */
 async function sendWebhook(o: OrderRecord): Promise<ChannelResult> {
   const url = process.env.ORDERS_WEBHOOK_URL;
   if (!url) return { channel: "webhook", ok: false, detail: "not configured" };
+
+  /* An Apps Script web app has to be published as "Anyone" — the site posts
+     with no Google login — so the URL alone is the only thing standing between
+     a stranger and a sheet full of fake orders. When a secret is configured the
+     script rejects anything that doesn't carry it. Sent in the body, not the
+     query string, so it stays out of access logs.
+
+     Apps Script cannot read custom request headers, which is why this rides
+     along as a field rather than an Authorization header. */
+  const secret = process.env.ORDERS_WEBHOOK_SECRET;
+  const body = secret ? { ...o, secret } : o;
+
   const res = await post(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(o)
+    body: JSON.stringify(body)
   });
   /* Apps Script answers 302 to its final /exec payload; fetch follows it, so a
      non-ok here is a real failure rather than the usual redirect noise. */
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  /* A 200 is not success. Apps Script deliberately answers 200 with
+     {ok:false} for a rejected secret or an internal error, because throwing an
+     HTTP error at the storefront would be worse. So the body is the real
+     status — without reading it, a sheet silently rejecting every order would
+     be reported here as "notified". */
+  const text = (await res.text()).trim();
+  if (text.startsWith("{")) {
+    const parsed = JSON.parse(text) as { ok?: boolean; error?: string; updated?: boolean };
+    if (parsed.ok === false) throw new Error(parsed.error || "script reported failure");
+    return { channel: "webhook", ok: true, detail: parsed.updated ? "updated existing row" : undefined };
+  }
+
+  /* HTML back instead of JSON almost always means the deployment's access is
+     "Anyone with a Google account" and we were handed a sign-in page. */
+  if (text.toLowerCase().includes("<html")) {
+    throw new Error(
+      "got an HTML page, not JSON — check the Apps Script deployment is set to 'Who has access: Anyone'"
+    );
+  }
   return { channel: "webhook", ok: true };
 }
 

@@ -10,7 +10,7 @@ run one, two or all three.
 
 | Channel | What you get | Cost | Setup |
 |---|---|---|---|
-| **Sheet + email** (Apps Script) | Permanent `Orders` tab in your sheet **and** an email per order | Free | ~5 min |
+| **Sheet + email** (Apps Script) | Full `Orders` tab — newest first, status + courier tracking — **and** an email per order | Free | ~5 min |
 | **Telegram** | Instant push notification on your phone | Free, unlimited | ~3 min |
 | **Email** (Resend) | Nicely formatted HTML email | Free to 3,000/month | ~5 min |
 
@@ -24,30 +24,90 @@ if the Apps Script quota is hit you still get the push. Any channel failing
 
 ---
 
-## Channel 1 — Sheet + email (do this one first)
+## Channel 1 — Orders sheet + email (do this one first)
 
-This is the important one, because it's the only channel that creates a
-**permanent record you can search later**. The script is already written and
-sitting in this repo.
+This is the important one. It's the only channel that creates a **permanent
+record you can search later**, and it doubles as your fulfilment board.
+
+### What you get
+
+An **Orders** tab, with the newest order always at **row 2** — right under the
+header, so you never scroll to find today's work. Each order fills in:
+
+| Group | Columns |
+|---|---|
+| Order | Placed · Order Ref · **Status** |
+| Customer | Customer · Phone · Address · City · PIN |
+| Basket | Items · Qty · Subtotal · Delivery · Total |
+| Payment | Payment · Paid? · Customer Notes |
+| **Tracking — you fill these in** | Courier · Tracking No · Dispatched On · Delivered On · Internal Notes |
+| Reference | Razorpay Order · Razorpay Payment · Last Updated |
+
+**Status** is a dropdown — New → Confirmed → Packed → Shipped → Delivered
+(plus Cancelled and Returned) — and **the whole row changes colour** to match,
+so you can see the state of every order at a glance. **Courier** is a dropdown
+too (Delhivery, Blue Dart, DTDC, India Post, Ekart, Xpressbees, Shiprocket,
+Self/Local), and you can type your own.
+
+The first three columns stay frozen while you scroll sideways, so you never
+lose track of which order a row belongs to.
+
+### Setup
 
 1. Open your Google Sheet → **Extensions → Apps Script**
 2. Delete anything in the editor, paste the entire contents of
    [`docs/orders-apps-script.js`](orders-apps-script.js)
-3. Line 24 — `NOTIFY_EMAIL` is set to `Official@houseofcharly.com`. Change it if
-   you want the alerts somewhere else.
-4. **Deploy → New deployment → Web app**
+3. Near the top, set **`NOTIFY_EMAIL`** to where you want order emails
+4. Set **`SHARED_SECRET`** to any random text you like — e.g.
+   `charly-7fK92mQx` — and keep it handy for step 7
+5. **Save**, then pick `setupOrdersSheet` from the function dropdown and click
+   **▶ Run**. Authorise when asked (Google warns about an unverified app —
+   it's your own script: *Advanced → Go to project*). This creates and formats
+   the tab.
+6. **Deploy → New deployment → Web app**
    - *Execute as:* **Me**
    - *Who has access:* **Anyone** ← this exact wording matters
-5. Authorise it (Google will warn about an unverified app — it's your own
-   script; click *Advanced → Go to project*), then copy the `/exec` URL
-6. Add it to your environment as `ORDERS_WEBHOOK_URL`
 
-> ⚠️ **"Anyone" is the step people get wrong.** If you pick *"Anyone with a
-> Google account"* the website's request gets silently rejected, and you'll
-> think it works until an order goes missing. The site posts anonymously — it
-> has no Google login.
+   Copy the `/exec` URL.
+7. Set both of these in your environment:
+   ```
+   ORDERS_WEBHOOK_URL    = <the /exec URL>
+   ORDERS_WEBHOOK_SECRET = <the same secret from step 4>
+   ```
+8. Back in the sheet, reload the page — a **House of Charly** menu appears in
+   the toolbar. Use **Add a test order** to check the row and email look right,
+   then delete that test row.
 
-The `Orders` tab is created automatically on the first order.
+> ⚠️ **"Anyone" is the step people get wrong.** The website posts anonymously —
+> it has no Google login. Pick *"Anyone with a Google account"* and every order
+> is silently rejected. The site now detects this specific mistake and logs
+> *"got an HTML page, not JSON — check the Apps Script deployment…"*, but it's
+> much easier to just get it right the first time.
+
+**Why the secret matters:** the endpoint has to be publicly reachable for the
+website to post to it, which means anyone who learns the URL could fill your
+sheet with junk orders. The secret is what keeps strangers out. It's optional —
+leave `SHARED_SECRET` empty to skip it — but it costs you nothing.
+
+### Editing the script later
+
+Apps Script serves the version you **deployed**, not the one you last saved.
+After any edit: **Deploy → Manage deployments → ✏️ → Version: New version →
+Deploy**. The `/exec` URL doesn't change.
+
+### Things it handles for you
+
+- **Newest first.** Rows are inserted at the top, not appended at the bottom.
+- **No duplicates.** If the same order reaches the sheet twice (a customer
+  refreshing during payment, say), it updates the existing row instead of
+  adding a second one — and it only refreshes the payment columns, so any
+  Status or tracking you've typed is never overwritten.
+- **Two orders at the same moment** can't overwrite each other; the script
+  takes a lock before writing.
+- **Times are shown in IST.** Setting up the tab pins the spreadsheet's
+  timezone to Asia/Kolkata so order times read correctly. You can change that
+  under *File → Settings* if you'd rather.
+- **Phone numbers stay text**, so Sheets can't mangle one into `9.87654e+09`.
 
 ---
 
@@ -111,6 +171,7 @@ variables is simply skipped.
 | Variable | Channel | Notes |
 |---|---|---|
 | `ORDERS_WEBHOOK_URL` | Sheet + email | The Apps Script `/exec` URL |
+| `ORDERS_WEBHOOK_SECRET` | Sheet + email | Must match `SHARED_SECRET` in the script. Keeps strangers from posting fake orders. |
 | `TELEGRAM_BOT_TOKEN` | Telegram | From @BotFather |
 | `TELEGRAM_CHAT_ID` | Telegram | From `getUpdates`; negative for groups |
 | `RESEND_API_KEY` | Email | From resend.com |
