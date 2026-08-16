@@ -79,9 +79,15 @@ export async function priceOrder(items: CartInput[]): Promise<PricedOrder> {
    public by design (it ships to the browser to open the modal), so honouring
    both spellings costs nothing. There is deliberately NO fallback for the
    secret: a NEXT_PUBLIC_ secret would be published to every visitor. */
+/* Dashboard env fields swallow a trailing newline or a pair of wrapping quotes
+   without complaint, and either one makes Razorpay answer 401 — identical to a
+   genuinely wrong key, with nothing on screen to tell them apart. Hours have
+   been lost to a value that was right except for one invisible character. */
+const clean = (v: string | undefined) => (v ?? "").trim().replace(/^["']|["']$/g, "");
+
 const keyId = () =>
-  process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
-const keySecret = () => process.env.RAZORPAY_KEY_SECRET || "";
+  clean(process.env.RAZORPAY_KEY_ID) || clean(process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+const keySecret = () => clean(process.env.RAZORPAY_KEY_SECRET);
 
 let warned = false;
 
@@ -160,7 +166,26 @@ export async function createRazorpayOrder(amountInRupees: number, receipt: strin
        made it into the host's environment. Worth naming explicitly; it is the
        single most common integration failure. */
     if (res.status === 401) {
-      console.error("[razorpay] 401 — RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are wrong or not set for this mode.");
+      /* "Authentication failed" is all Razorpay says, and it means any of:
+         the key was regenerated and this one is stale, the id and secret come
+         from different pairs, or a test key is being used against live mode.
+         So print a fingerprint that separates them at a glance.
+
+         The key id is safe to log in full — it already ships to every
+         customer's browser to open the modal. The secret is NEVER logged; only
+         its length, which is the one property that reveals a stray character
+         without revealing the value. A Razorpay secret is 24 characters. */
+      const id = keyId();
+      const secretLen = keySecret().length;
+      console.error(
+        `[razorpay] 401 Authentication failed.\n` +
+          `  key id in use : ${id || "(empty)"}\n` +
+          `  key id mode   : ${id.startsWith("rzp_live_") ? "LIVE" : id.startsWith("rzp_test_") ? "TEST" : "UNRECOGNISED"}\n` +
+          `  secret length : ${secretLen}${secretLen && secretLen !== 24 ? "  <-- expected 24; check for a stray space or quote" : ""}\n` +
+          `  Compare that key id against Razorpay Dashboard > Account & Settings > API Keys. ` +
+          `If it does not match, the key was regenerated and the new pair must be set in your host's ` +
+          `environment (BOTH id and secret — they only work as a matched pair), then redeploy.`
+      );
       throw new RazorpayError("Payment gateway rejected our credentials.", 401);
     }
     throw new RazorpayError(
