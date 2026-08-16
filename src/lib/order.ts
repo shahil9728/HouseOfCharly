@@ -69,14 +69,49 @@ export async function priceOrder(items: CartInput[]): Promise<PricedOrder> {
 
 /* ---------------------------- Razorpay ---------------------------------- */
 
-const KEY_ID = process.env.RAZORPAY_KEY_ID ?? "";
-const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? "";
+/* Read at call time, not module load. Env vars captured into a module-level
+   const are frozen for the whole lifetime of a warm serverless instance, so a
+   variable added in the host dashboard appears not to work until something
+   forces a cold start — an afternoon lost to a value that was correct all along.
 
-/** Online payment is offered only when both keys are present. */
-export const razorpayReady = () => Boolean(KEY_ID && KEY_SECRET);
+   NEXT_PUBLIC_RAZORPAY_KEY_ID is accepted as a fallback purely because
+   Razorpay's own integration guide tells people to name it that. The key id is
+   public by design (it ships to the browser to open the modal), so honouring
+   both spellings costs nothing. There is deliberately NO fallback for the
+   secret: a NEXT_PUBLIC_ secret would be published to every visitor. */
+const keyId = () =>
+  process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
+const keySecret = () => process.env.RAZORPAY_KEY_SECRET || "";
+
+let warned = false;
+
+/**
+ * Online payment is offered only when both keys are present.
+ *
+ * When they aren't, checkout silently degrades to Cash on Delivery — right for
+ * the customer, but indistinguishable from "I configured it wrong" for whoever
+ * is running the shop. So say which half is missing, once, in the log.
+ */
+export const razorpayReady = () => {
+  const id = keyId();
+  const secret = keySecret();
+  const ready = Boolean(id && secret);
+
+  if (!ready && !warned) {
+    warned = true;
+    const missing = [!id && "RAZORPAY_KEY_ID", !secret && "RAZORPAY_KEY_SECRET"].filter(Boolean);
+    console.warn(
+      `[razorpay] Online payment is OFF — checkout will show Cash on Delivery only. ` +
+        `Missing: ${missing.join(" and ")}. ` +
+        `Set them in your host's environment variables, then redeploy (env changes ` +
+        `do not reach a running deploy). See docs/ORDER-NOTIFICATIONS.md.`
+    );
+  }
+  return ready;
+};
 
 export function publicKeyId() {
-  return KEY_ID;
+  return keyId();
 }
 
 /** Razorpay rejects anything under ₹1. Guard here so the failure is ours and
@@ -106,7 +141,7 @@ export async function createRazorpayOrder(amountInRupees: number, receipt: strin
   const res = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
     headers: {
-      Authorization: "Basic " + Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64"),
+      Authorization: "Basic " + Buffer.from(`${keyId()}:${keySecret()}`).toString("base64"),
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
@@ -142,8 +177,9 @@ export async function createRazorpayOrder(amountInRupees: number, receipt: strin
  * compare in constant time. Without this, anyone can POST a fake success.
  */
 export function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string) {
-  if (!KEY_SECRET || !orderId || !paymentId || !signature) return false;
-  const expected = createHmac("sha256", KEY_SECRET).update(`${orderId}|${paymentId}`).digest("hex");
+  const secret = keySecret();
+  if (!secret || !orderId || !paymentId || !signature) return false;
+  const expected = createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
   const a = Buffer.from(expected, "utf8");
   const b = Buffer.from(signature, "utf8");
   return a.length === b.length && timingSafeEqual(a, b);
